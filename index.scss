@@ -1,0 +1,57 @@
+#demo {
+  .tree-chart-container, .tree-chart-content, .tree-chart-children-container {
+    display: inline-block;
+  }
+
+  .tree-chart-content, .tree-chart-children-container {
+    vertical-align: middle;
+  }
+
+  .tree-chart-children-container {
+    > .tree-chart-container {
+      display: block;
+    }
+  }
+
+  .tree-chart-container {
+    &:last-child, &.is-node-container {
+      margin-bottom: 0 !important;
+    }
+
+    &.is-node-container {
+      position: relative;
+      z-index: 2;
+
+      &.cursor-move {
+        cursor: move;
+      }
+    }
+  }
+
+  .tree-chart-link-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+
+    path {
+      fill: none;
+      stroke: red;
+      stroke-linecap: round;
+    }
+  }
+
+  .tree-chart-ghost-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    pointer-events: none;
+
+    .tree-chart-content {
+      opacity: 0.5;
+    }
+  }
+}
