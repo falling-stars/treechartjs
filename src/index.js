@@ -1,3 +1,5 @@
+import './index.scss'
+
 class TreeChart {
   constructor(options) {
     this.options = Object.assign(
@@ -161,3 +163,5 @@ class TreeChart {
     })
   }
 }
+
+export default TreeChart
