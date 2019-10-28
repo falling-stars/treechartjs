@@ -5,7 +5,7 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 module.exports = {
   mode: isDevelopment ? 'development' : 'production',
   entry: {
-    index: ['babel-polyfill', resolve(`./src/${ isDevelopment ? 'test' : '' }`)]
+    index: ['babel-polyfill', resolve(`./src/${isDevelopment ? 'test' : ''}`)]
   },
   output: {
     path: resolve(__dirname, './dist')
@@ -22,7 +22,7 @@ module.exports = {
       },
       {
         test: /\.scss$/,
-        loader: ['css-loader', 'postcss-loader', 'sass-loader']
+        loader: ['style-loader', 'css-loader', 'postcss-loader', 'sass-loader']
       }
     ]
   },
