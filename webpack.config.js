@@ -5,7 +5,7 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 module.exports = {
   mode: isDevelopment ? 'development' : 'production',
   entry: {
-    index: ['babel-polyfill', resolve(`./src/${isDevelopment ? 'test' : ''}`)]
+    index: ['babel-polyfill', resolve(__dirname,`./src/${isDevelopment ? 'test' : ''}`)]
   },
   output: {
     path: resolve(__dirname, './dist')
@@ -28,20 +28,16 @@ module.exports = {
   },
   plugins: isDevelopment ? [
     new HtmlWebpackPlugin({
-      template: resolve('./src/test/index.html')
+      template: resolve(__dirname,'./src/test/index.html')
     }),
     new webpack.NamedModulesPlugin(),
     new webpack.HotModuleReplacementPlugin()
   ] : [],
   devServer: {
     host: '0.0.0.0',
-    port:
-      8080,
-    hot:
-      true,
-    disableHostCheck:
-      true,
-    contentBase:
-      resolve('./dist')
+    port: 8080,
+    hot: true,
+    disableHostCheck: true,
+    contentBase: resolve('./dist')
   }
 }
