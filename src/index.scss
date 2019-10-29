@@ -12,6 +12,7 @@
     }
   }
   .tree-chart-container {
+    white-space: nowrap;
     &:last-child, &.is-node-container {
       margin-bottom: 0 !important;
     }
