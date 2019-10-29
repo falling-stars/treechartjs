@@ -159,12 +159,6 @@ class TreeChart {
         this.collideData[key].list.sort((a, b) => a - b)
       }
     }
-    this.collideRangeData = {}
-    for (const key in this.collideData) {
-      if (this.collideData.hasOwnProperty(key) && key !== 'addData') {
-        // todo
-      }
-    }
   }
 
   setDrag() {
@@ -224,6 +218,16 @@ class TreeChart {
       return null
     }
 
+    const getRangeList = (startItem, data, direct = 'after') => {
+      let result = []
+      !isNaN(startItem) && data.list.forEach(item => {
+        if (direct === 'before' ? item <= startItem : item >= startItem) {
+          result = result.concat(data[item])
+        }
+      })
+      return result
+    }
+
     const collideData = this.collideData
     const leftList = collideData.left.list
     const topList = collideData.top.list
@@ -237,10 +241,11 @@ class TreeChart {
     const searchBottom = searchCurrent(top, topList)
 
     let leftTopCover = null
+    // let rightBottomCover = null
 
     // 左顶点和上顶点求交集确定被覆盖的元素
-    const leftCatchList = collideData.right[searchLeft]
-    const topCatchList = collideData.bottom[searchTop]
+    const leftCatchList = getRangeList(searchLeft, collideData.right)
+    const topCatchList = getRangeList(searchTop, collideData.bottom)
     for (const leftItem of leftCatchList) {
       if (leftItem !== itemKey && topCatchList.includes(leftItem)) {
         leftTopCover = leftItem
@@ -248,7 +253,16 @@ class TreeChart {
       }
     }
 
-    console.log(leftCatchList, topCatchList)
+    // // 右顶点和下顶点求交集确定被覆盖的元素
+    // const rightCatchList = getRangeList(searchRight, collideData.left, 'before')
+    // const bottomCatchList = getRangeList(searchBottom, collideData.top, 'before')
+    // for (const rightItem of rightCatchList) {
+    //   if (rightItem !== itemKey && bottomCatchList.includes(rightItem)) {
+    //     rightBottomCover = rightItem
+    //     break
+    //   }
+    // }
+    console.log(leftTopCover)
   }
 }
 
