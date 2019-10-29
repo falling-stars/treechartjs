@@ -31,6 +31,7 @@ new TreeChart({
   data,
   container: document.querySelector('#demo'),
   distanceX: 100,
+  distanceY: 40,
   draggable: true,
   smooth: 60,
   contentRender(data) {
