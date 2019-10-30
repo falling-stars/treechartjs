@@ -17,7 +17,7 @@ const data = {
         {
           name: 122,
           id: 122,
-          children: [{ name: 1221, id: 1221 }, { name: 1222, id: 1222 }]
+          children: [{ name: 1221, id: 1221 }, { name: 1222, id: 1222 }, { name: 1223, id: 1223 }]
         }
       ]
     },

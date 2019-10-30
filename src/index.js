@@ -16,7 +16,7 @@ class TreeChart {
     this.createNodes(options.data, this.container, true)
     this.createLink()
     if (this.options.draggable) {
-      this.setCollideData()
+      this.setPositionData('sort')
       this.setDrag()
     }
   }
@@ -67,32 +67,44 @@ class TreeChart {
   }
 
   createLink() {
+    const container = this.container
     const nodeContainer = this.nodeContainer
     const linkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     this.linkContainer = linkContainer
     linkContainer.classList.add('tree-chart-link-container')
     linkContainer.setAttribute('width', `${ nodeContainer.clientWidth }px`)
     linkContainer.setAttribute('height', `${ nodeContainer.clientHeight }px`)
-    this.container.appendChild(linkContainer)
+    container.appendChild(linkContainer)
     const contentList = document.querySelectorAll('.tree-chart-content')
+    const { left: offsetLeftValue, top: offsetTopValue } = container.getBoundingClientRect()
     for (const item of contentList) {
-      const childrenKey = item.getAttribute('data-children')
-      if (childrenKey) {
+      const childrenKeys = item.getAttribute('data-children')
+      const itemLayout = item.getBoundingClientRect()
+      const itemKey = item.getAttribute('data-key')
+      if (childrenKeys) {
         const from = {
-          x: item.offsetLeft + item.offsetWidth,
-          y: item.offsetTop + item.offsetHeight / 2,
-          key: item.getAttribute('data-key')
+          x: itemLayout.left - offsetLeftValue + item.offsetWidth,
+          y: itemLayout.top - offsetTopValue + item.offsetHeight / 2,
+          key: itemKey
         }
-        childrenKey.split(',').forEach(key => {
-          const childrenElement = document.querySelector(`.tree-chart-item-${ key }`)
+        childrenKeys.split(',').forEach(childKey => {
+          const childrenElement = document.querySelector(`.tree-chart-item-${ childKey }`)
+          const childrenLayout = childrenElement.getBoundingClientRect()
           const to = {
-            x: childrenElement.offsetLeft,
-            y: childrenElement.offsetTop + childrenElement.offsetHeight / 2,
-            key
+            x: childrenLayout.left - offsetLeftValue,
+            y: childrenLayout.top - offsetTopValue + childrenElement.offsetHeight / 2,
+            key: childKey
           }
           this.drawLine(from, to)
         })
       }
+      this.options.draggable && this.setPositionData('add', {
+        left: itemLayout.left - offsetLeftValue,
+        right: itemLayout.right - offsetLeftValue,
+        top: itemLayout.top - offsetTopValue,
+        bottom: itemLayout.bottom - offsetTopValue,
+        key: itemKey
+      })
     }
   }
 
@@ -116,47 +128,46 @@ class TreeChart {
     link.setAttribute('d', `M${ M } Q${ Q1 } ${ Q2 } T ${ L }`)
   }
 
-  setCollideData() {
-    this.collideData = {
-      left: {
-        list: []
-      },
-      right: {
-        list: []
-      },
-      top: {
-        list: []
-      },
-      bottom: {
-        list: []
-      },
-      addData(data) {
-        for (const keyName in data) {
-          const keyValue = data.key
-          if (data.hasOwnProperty(keyName) && keyName !== 'key') {
-            const currentValue = data[keyName]
-            const targetAttribute = this[keyName]
-            targetAttribute.list.indexOf(currentValue) === -1 && targetAttribute.list.push(currentValue)
-            if (targetAttribute[currentValue]) {
-              targetAttribute[currentValue].push(keyValue)
-            } else {
-              targetAttribute[currentValue] = [keyValue]
+  setPositionData(operation, data) {
+    if (!this.positionData) {
+      this.positionData = {
+        left: {
+          list: []
+        },
+        right: {
+          list: []
+        },
+        top: {
+          list: []
+        },
+        bottom: {
+          list: []
+        },
+        addData(data) {
+          for (const keyName in data) {
+            const keyValue = data.key
+            if (data.hasOwnProperty(keyName) && /left|right|top|bottom/.test(keyName)) {
+              const currentValue = data[keyName]
+              const targetAttribute = this[keyName]
+              targetAttribute.list.indexOf(currentValue) === -1 && targetAttribute.list.push(currentValue)
+              if (targetAttribute[currentValue]) {
+                targetAttribute[currentValue].push(keyValue)
+              } else {
+                targetAttribute[currentValue] = [keyValue]
+              }
+              this[keyValue] = data
             }
           }
         }
       }
     }
-    document.querySelectorAll('.tree-chart-content').forEach(item => {
-      const key = item.getAttribute('data-key')
-      const left = item.offsetLeft
-      const right = left + item.offsetWidth
-      const top = item.offsetTop
-      const bottom = top + item.offsetHeight
-      this.collideData.addData({ left, right, top, bottom, key })
-    })
-    for (const key in this.collideData) {
-      if (this.collideData.hasOwnProperty(key) && this.collideData[key].list) {
-        this.collideData[key].list.sort((a, b) => a - b)
+    const positionData = this.positionData
+    if (operation === 'add') positionData.addData(data)
+    if (operation === 'sort') {
+      for (const key in positionData) {
+        if (positionData.hasOwnProperty(key) && positionData[key].list) {
+          positionData[key].list.sort((a, b) => a - b)
+        }
       }
     }
   }
@@ -168,42 +179,120 @@ class TreeChart {
     ghostContainer.style.width = `${ nodeContainer.clientWidth }px`
     ghostContainer.style.height = `${ nodeContainer.clientHeight }px`
     this.container.appendChild(ghostContainer)
-    let dragging = false
+    let draggingElement = null
     let ghostElement = null
-    let eventX = 0
-    let eventY = 0
+    let moveX = 0
+    let moveY = 0
+    const resetStyle = () => {
+      const tempLink = this.linkContainer.querySelector('.line-from-to')
+      tempLink && this.linkContainer.removeChild(tempLink)
+      document.querySelectorAll('.tree-chart-content').forEach(node => {
+        node.classList.remove('become-previous')
+        node.classList.remove('become-next')
+        node.classList.remove('become-child')
+      })
+    }
     nodeContainer.querySelectorAll('.tree-chart-content').forEach(itemElement => {
       itemElement.addEventListener('mousedown', e => {
-        dragging = true
-        const { offsetX, offsetY, currentTarget } = e
-        eventX = offsetX
-        eventY = offsetY
+        const currentTarget = e.currentTarget
+        draggingElement = currentTarget
         ghostElement = currentTarget.cloneNode(true)
+        const currentKey = currentTarget.getAttribute('data-key')
+        moveX = this.positionData[currentKey].left
+        moveY = this.positionData[currentKey].top
       })
     })
     nodeContainer.addEventListener('mousemove', e => {
-      if (dragging) {
+      if (draggingElement) {
         getSelection ? getSelection().removeAllRanges() : document.selection.empty()
         nodeContainer.classList.add('cursor-move')
         !ghostContainer.contains(ghostElement) && ghostContainer.appendChild(ghostElement)
-        const translateX = e.layerX - eventX
-        const translateY = e.layerY - eventY
-        ghostElement.style.transform = `translate(${ translateX }px, ${ translateY }px)`
-        const right = translateX + ghostElement.offsetWidth
-        const bottom = translateY + ghostElement.offsetHeight
-        this.checkCollide(ghostElement.getAttribute('data-key'), translateX, right, translateY, bottom)
+        moveX = moveX + e.movementX
+        moveY = moveY + e.movementY
+        ghostElement.style.transform = `translate(${ moveX }px, ${ moveY }px)`
+        const right = moveX + ghostElement.offsetWidth
+        const bottom = moveY + ghostElement.offsetHeight
+        resetStyle()
+        const collideNode = this.getCollideNode(ghostElement.getAttribute('data-key'), moveX, right, moveY, bottom)
+        const allowCoverNode = []
+        collideNode.forEach(node => {
+          const draggingParent = draggingElement.parentElement
+          // ignore root Node
+          if (draggingParent === this.nodeContainer) return
+          // ignore childNode
+          if (draggingParent.contains(node)) return
+          allowCoverNode.push(node)
+          // ignore first parentNode
+          // if (draggingElement.parentElement.parentElement.previousElementSibling === node) return
+        })
+        if (allowCoverNode.length === 1) {
+          const targetNode = allowCoverNode[0]
+          const targetNodeKey = targetNode.getAttribute('data-key')
+          const { top: targetTop, bottom: targetBottom, left: targetLeft, right: targetRight } = this.positionData[targetNodeKey]
+          // 位置偏上或者偏下(40%)则认为是添加兄弟节点
+          const offsetValue = (targetBottom - targetTop) * 0.4
+          const topPositionValue = targetTop + offsetValue
+          const bottomPositionValue = targetBottom - offsetValue
+
+          const parentKey = targetNode.parentElement.parentElement.previousElementSibling.getAttribute('data-key')
+          const parentPosition = this.positionData[parentKey]
+
+          let insertType = ''
+
+          if (bottom <= topPositionValue) {
+            // 在上方插入
+            insertType = 'previous'
+          } else if (moveY >= bottomPositionValue) {
+            // 在下方插入
+            insertType = 'next'
+          } else {
+            // 作为子节点插入
+            insertType = 'child'
+          }
+          targetNode.classList.add(`become-${ insertType }`)
+
+          let from = null
+          let to = null
+          if (insertType === 'previous' || insertType === 'next') {
+            from = {
+              x: parentPosition.right,
+              y: (parentPosition.top + parentPosition.bottom) / 2,
+              key: 'from'
+            }
+            to = {
+              x: targetLeft,
+              y: insertType === 'previous' ? targetTop - 20 : targetBottom + 20,
+              key: 'to'
+            }
+          } else {
+            from = {
+              x: targetRight,
+              y: (targetTop + targetBottom) / 2,
+              key: 'from'
+            }
+            to = {
+              x: targetRight + 20,
+              y: (targetTop + targetBottom) / 2,
+              key: 'to'
+            }
+          }
+          this.drawLine(from, to)
+        }
       }
     })
     nodeContainer.addEventListener('mouseup', e => {
       nodeContainer.classList.remove('cursor-move')
-      dragging = false
+      draggingElement = null
       ghostElement = null
       ghostContainer.innerHTML = ''
+      moveX = 0
+      moveY = 0
+      resetStyle()
     })
   }
 
-  checkCollide(itemKey, left, right, top, bottom) {
-    // Find covered contentElement
+  getCollideNode(moveItemKey, left, right, top, bottom) {
+    // Find current collide contentElement position
     const searchCurrent = (target, list, searchLarge) => {
       const listLen = list.length
       if (searchLarge) {
@@ -228,41 +317,46 @@ class TreeChart {
       return result
     }
 
-    const collideData = this.collideData
-    const leftList = collideData.left.list
-    const topList = collideData.top.list
-    const rightList = collideData.right.list
-    const bottomList = collideData.bottom.list
+    const positionData = this.positionData
+    const leftList = positionData.left.list
+    const topList = positionData.top.list
+    const rightList = positionData.right.list
+    const bottomList = positionData.bottom.list
 
     // 寻找边界内的坐标
     const searchLeft = searchCurrent(left, rightList, true)
     const searchTop = searchCurrent(top, bottomList, true)
     const searchRight = searchCurrent(right, leftList)
-    const searchBottom = searchCurrent(top, topList)
+    const searchBottom = searchCurrent(bottom, topList)
 
-    let leftTopCover = null
-    // let rightBottomCover = null
+    const leftTopCollide = []
+    const rightBottomCollide = []
 
-    // 左顶点和上顶点求交集确定被覆盖的元素
-    const leftCatchList = getRangeList(searchLeft, collideData.right)
-    const topCatchList = getRangeList(searchTop, collideData.bottom)
-    for (const leftItem of leftCatchList) {
-      if (leftItem !== itemKey && topCatchList.includes(leftItem)) {
-        leftTopCover = leftItem
-        break
+    // 左顶点和上顶点求交集确定在右下方的元素
+    const leftCatchList = getRangeList(searchLeft, positionData.right)
+    const topCatchList = getRangeList(searchTop, positionData.bottom)
+    leftCatchList.forEach(item => {
+      if (item !== moveItemKey && topCatchList.includes(item)) {
+        leftTopCollide.push(item)
       }
-    }
+    })
 
-    // // 右顶点和下顶点求交集确定被覆盖的元素
-    // const rightCatchList = getRangeList(searchRight, collideData.left, 'before')
-    // const bottomCatchList = getRangeList(searchBottom, collideData.top, 'before')
-    // for (const rightItem of rightCatchList) {
-    //   if (rightItem !== itemKey && bottomCatchList.includes(rightItem)) {
-    //     rightBottomCover = rightItem
-    //     break
-    //   }
-    // }
-    console.log(leftTopCover)
+    // 右顶点和下顶点求交集确定在左上方的元素
+    const rightCatchList = getRangeList(searchRight, positionData.left, 'before')
+    const bottomCatchList = getRangeList(searchBottom, positionData.top, 'before')
+    rightCatchList.forEach(item => {
+      if (item !== moveItemKey && bottomCatchList.includes(item)) {
+        rightBottomCollide.push(item)
+      }
+    })
+
+    // 两个区间求交集确定被碰撞的元素
+    const collideNode = []
+    leftTopCollide.forEach(item => {
+      rightBottomCollide.includes(item) && collideNode.push(document.querySelector(`.tree-chart-item-${ item }`))
+    })
+
+    return collideNode
   }
 }
 

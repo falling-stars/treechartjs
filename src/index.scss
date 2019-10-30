@@ -1,18 +1,16 @@
 .tree-chart {
   position: relative;
-  .tree-chart-container, .tree-chart-content, .tree-chart-children-container {
-    display: inline-block;
-  }
-  .tree-chart-content, .tree-chart-children-container {
-    vertical-align: middle;
-  }
   .tree-chart-children-container {
+    vertical-align: middle;
+    display: inline-block;
     > .tree-chart-container {
       display: block;
     }
   }
   .tree-chart-container {
+    display: inline-block;
     white-space: nowrap;
+    position: relative;
     &:last-child, &.is-node-container {
       margin-bottom: 0 !important;
     }
@@ -21,6 +19,43 @@
       z-index: 2;
       &.cursor-move {
         cursor: move;
+      }
+    }
+  }
+  .tree-chart-content {
+    display: inline-block;
+    vertical-align: middle;
+    &.become-child {
+      box-shadow: 0 0 2px 2px #ff9a36;
+    }
+    &.become-previous {
+      position: relative;
+      box-shadow: 0 0 2px 2px #ff9a36;
+      &:after {
+        position: absolute;
+        left: 0;
+        top: -30px;
+        content: '';
+        display: block;
+        width: 100%;
+        height: 20px;
+        border-radius: 1px;
+        background-color: #ffc46b;
+      }
+    }
+    &.become-next {
+      position: relative;
+      box-shadow: 0 0 2px 2px #ff9a36;
+      &:after {
+        position: absolute;
+        left: 0;
+        bottom: -30px;
+        content: '';
+        display: block;
+        width: 100%;
+        height: 20px;
+        border-radius: 1px;
+        background-color: #ffc46b;
       }
     }
   }
