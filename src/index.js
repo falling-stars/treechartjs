@@ -197,9 +197,7 @@ class TreeChart {
       const tempLink = this.linkContainer.querySelector('.line-from-to')
       tempLink && this.linkContainer.removeChild(tempLink)
       document.querySelectorAll('.tree-chart-content').forEach(node => {
-        node.classList.remove('become-previous')
-        node.classList.remove('become-next')
-        node.classList.remove('become-child')
+        node.classList.remove('become-previous', 'become-next', 'become-child')
       })
       const tempChildrenContainer = document.querySelector('.temp-children-container')
       tempChildrenContainer && tempChildrenContainer.parentElement.removeChild(tempChildrenContainer)
