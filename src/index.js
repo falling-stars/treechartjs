@@ -7,7 +7,8 @@ class TreeChart {
         distanceX: 60,
         distanceY: 60,
         draggable: false,
-        smooth: 50
+        smooth: 50,
+        scrollSpeed: 8
       },
       options
     )
@@ -19,6 +20,10 @@ class TreeChart {
     if (this.draggable) {
       this.setPositionData('sort')
       this.setDrag()
+      this.foolowScrollData = {
+        interval: null,
+        direct: ''
+      }
     }
     this.resize()
   }
@@ -186,22 +191,43 @@ class TreeChart {
   setDrag() {
     this.draggingElement = null
     const rootNodeContainer = this.rootNodeContainer
+    const container = this.container
+
+    // 设置镜像效果
     const ghostContainer = document.createElement('div')
     ghostContainer.classList.add('tree-chart-ghost-container')
     this.container.appendChild(ghostContainer)
     this.ghostContainer = ghostContainer
+
     let ghostElement = null
     let ghostElementX = 0
     let ghostElementY = 0
-    const resetEffect = () => {
+
+    const getGhostPosition = () => {
+      return {
+        left: ghostElementX,
+        top: ghostElementY,
+        right: ghostElementX + ghostElement.offsetWidth,
+        bottom: ghostElementY + ghostElement.offsetHeight
+      }
+    }
+
+    // 清除原先的交互效果
+    const removeEffect = () => {
       const tempLink = this.linkContainer.querySelector('.line-from-to')
       tempLink && this.linkContainer.removeChild(tempLink)
-      document.querySelectorAll('.tree-chart-content').forEach(node => {
+      document.querySelectorAll('.collide-node').forEach(node => {
         node.classList.remove('become-previous', 'become-next', 'become-child')
       })
       const tempChildrenContainer = document.querySelector('.temp-children-container')
       tempChildrenContainer && tempChildrenContainer.parentElement.removeChild(tempChildrenContainer)
     }
+    const setEffect = ghostElementPosition => {
+      removeEffect()
+      const collideNode = this.getCollideNode(ghostElement.getAttribute('data-key'), ghostElementPosition)
+      collideNode && this.createDragEffect(collideNode, ghostElementPosition)
+    }
+
     rootNodeContainer.querySelectorAll('.tree-chart-content').forEach(itemElement => {
       // 根节点无法拖动
       if (itemElement === this.rootNode) return
@@ -224,15 +250,10 @@ class TreeChart {
         ghostElementX += e.movementX
         ghostElementY += e.movementY
         ghostElement.style.transform = `translate(${ ghostElementX }px, ${ ghostElementY }px)`
-        const ghostElementPosition = {
-          left: ghostElementX,
-          top: ghostElementY,
-          right: ghostElementX + ghostElement.offsetWidth,
-          bottom: ghostElementY + ghostElement.offsetHeight
-        }
-        resetEffect()
-        const collideNode = this.getCollideNode(ghostElement.getAttribute('data-key'), ghostElementPosition)
-        collideNode && this.createDragEffect(collideNode, ghostElementPosition)
+        const ghostPosition = getGhostPosition()
+        setEffect(ghostPosition)
+        // 跟随滚动
+        this.followScroll(ghostPosition)
       }
     })
     rootNodeContainer.addEventListener('mouseup', e => {
@@ -242,8 +263,25 @@ class TreeChart {
       ghostContainer.innerHTML = ''
       ghostElementX = 0
       ghostElementY = 0
-      resetEffect()
+      removeEffect()
       this.resize()
+      this.stopFollowScroll()
+    })
+
+    // 考虑滚动情况
+    const oldScroll = {
+      top: container.scrollTop,
+      left: container.scrollLeft
+    }
+    container.addEventListener('scroll', e => {
+      if (this.draggingElement && ghostElement) {
+        ghostElementY = ghostElementY + container.scrollTop - oldScroll.top
+        ghostElementX = ghostElementX + container.scrollLeft - oldScroll.left
+        ghostElement.style.transform = `translate(${ ghostElementX }px, ${ ghostElementY }px)`
+        setEffect(getGhostPosition())
+      }
+      oldScroll.top = container.scrollTop
+      oldScroll.left = container.scrollLeft
     })
   }
 
@@ -303,7 +341,7 @@ class TreeChart {
         }
       }
     }
-    coverNode.classList.add(`become-${ insertType }`)
+    coverNode.classList.add(`become-${ insertType }`, 'collide-node')
 
     if (insertType === 'child') {
       from = {
@@ -462,11 +500,67 @@ class TreeChart {
 
   resize() {
     const rootNodeContainer = this.rootNodeContainer
-    this.linkContainer.setAttribute('width', `${ rootNodeContainer.clientWidth }px`)
-    this.linkContainer.setAttribute('height', `${ rootNodeContainer.clientHeight }px`)
+    this.containerWidth = rootNodeContainer.clientWidth
+    this.containerHeight = rootNodeContainer.clientHeight
+    this.linkContainer.setAttribute('width', `${ this.containerWidth }px`)
+    this.linkContainer.setAttribute('height', `${ this.containerHeight }px`)
     if (this.ghostContainer) {
-      this.ghostContainer.style.width = `${ rootNodeContainer.clientWidth }px`
-      this.ghostContainer.style.height = `${ rootNodeContainer.clientHeight }px`
+      this.ghostContainer.style.width = `${ this.containerWidth }px`
+      this.ghostContainer.style.height = `${ this.containerHeight }px`
+    }
+  }
+
+  stopFollowScroll(clearDirect = true) {
+    this.foolowScrollData.interval && clearInterval(this.foolowScrollData.interval)
+    if (clearDirect) this.foolowScrollData.direct = ''
+  }
+
+  followScroll({ left, top, right, bottom }) {
+    const container = this.container
+    let direct = ''
+    const hasRightContent = container.scrollWidth - container.scrollLeft > container.clientWidth
+    const hasBottomContent = container.scrollHeight - container.scrollTop > container.clientHeight
+    if (container.scrollLeft > 0 && left < container.scrollLeft + 50) {
+      direct = 'Left'
+    } else if (container.scrollTop > 0 && top < container.scrollTop + 50) {
+      direct = 'Top'
+    } else if (hasRightContent && container.clientWidth + container.scrollLeft - 50 < right) {
+      direct = 'Right'
+    } else if (hasBottomContent && container.clientHeight + container.scrollTop - 50 < bottom) {
+      direct = 'Bottom'
+    } else {
+      return this.stopFollowScroll()
+    }
+    if (this.foolowScrollData.direct !== direct) {
+      this.stopFollowScroll(false)
+      this.foolowScrollData.direct = direct
+      const scrollSpeed = this.options.scrollSpeed
+      this.foolowScrollData.interval = setInterval(() => {
+        if (direct === 'Left' || direct === 'Top') {
+          container[`scroll${ direct }`] -= scrollSpeed
+        } else {
+          if (direct === 'Right') {
+            container.scrollLeft += scrollSpeed
+          } else {
+            container.scrollTop += scrollSpeed
+          }
+        }
+        let stop = false
+        switch (direct) {
+          case 'Left':
+            stop = container.scrollLeft === 0
+            break
+          case 'Top':
+            stop = container.scrollTop === 0
+            break
+          case 'Right':
+            stop = container.scrollLeft + container.clientWidth === container.scrollWidth
+            break
+          case 'Bottom':
+            stop = !container.scrollTop > 0
+        }
+        stop && this.stopFollowScroll()
+      }, 20)
     }
   }
 }

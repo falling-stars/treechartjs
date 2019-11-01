@@ -1,4 +1,8 @@
 .tree-chart {
+  margin-top: 100px;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
   position: relative;
   .is-node-container {
     position: relative;
@@ -86,6 +90,7 @@
     }
   }
   .tree-chart-link-container {
+    overflow: hidden;
     position: absolute;
     top: 0;
     left: 0;
@@ -100,6 +105,7 @@
     }
   }
   .tree-chart-ghost-container {
+    overflow: hidden;
     position: absolute;
     left: 0;
     top: 0;
