@@ -224,7 +224,7 @@ class TreeChart {
     }
     const setEffect = ghostElementPosition => {
       removeEffect()
-      const collideNode = this.getCollideNode(ghostElement.getAttribute('data-key'), ghostElementPosition)
+      const collideNode = this.getCollideNode(ghostElementPosition)
       collideNode && this.createDragEffect(collideNode, ghostElementPosition)
     }
 
@@ -388,7 +388,8 @@ class TreeChart {
   }
 
   // 获取拖动过程中碰撞的元素
-  getCollideNode(moveItemKey, { left, right, top, bottom }) {
+  getCollideNode({ left, right, top, bottom }) {
+    const draggingElementKey = this.draggingElement.getAttribute('data-key')
     // Find current collide contentElement position
     const searchCurrent = (target, list, searchLarge) => {
       const listLen = list.length
@@ -433,7 +434,7 @@ class TreeChart {
     const leftCatchList = getRangeList(searchLeft, positionData.right)
     const topCatchList = getRangeList(searchTop, positionData.bottom)
     leftCatchList.forEach(item => {
-      if (item !== moveItemKey && topCatchList.includes(item)) {
+      if (item !== draggingElementKey && topCatchList.includes(item)) {
         leftTopCollide.push(item)
       }
     })
@@ -442,7 +443,7 @@ class TreeChart {
     const rightCatchList = getRangeList(searchRight, positionData.left, 'before')
     const bottomCatchList = getRangeList(searchBottom, positionData.top, 'before')
     rightCatchList.forEach(item => {
-      if (item !== moveItemKey && bottomCatchList.includes(item)) {
+      if (item !== draggingElementKey && bottomCatchList.includes(item)) {
         rightBottomCollide.push(item)
       }
     })
