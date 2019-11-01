@@ -49,6 +49,7 @@ new TreeChart({
   distanceY: 40,
   draggable: true,
   smooth: 60,
+  scrollTriggerDistance: 30,
   contentRender(data) {
     const container = document.createElement('div')
     container.style.width = '290px'

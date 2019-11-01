@@ -7,8 +7,11 @@ class TreeChart {
         distanceX: 60,
         distanceY: 60,
         draggable: false,
+        // 光滑程度
         smooth: 50,
-        scrollSpeed: 8
+        scrollSpeed: 8,
+        // 触发滚动的距离
+        scrollTriggerDistance: 50
       },
       options
     )
@@ -228,17 +231,16 @@ class TreeChart {
       collideNode && this.createDragEffect(collideNode, ghostElementPosition)
     }
 
-    rootNodeContainer.querySelectorAll('.tree-chart-content').forEach(itemElement => {
+    rootNodeContainer.addEventListener('mousedown', e => {
+      const dragNode = e.path.find(el => el.nodeType === 1 && el.classList.contains('tree-chart-content'))
       // 根节点无法拖动
-      if (itemElement === this.rootNode) return
-      itemElement.addEventListener('mousedown', e => {
-        const currentTarget = e.currentTarget
-        this.draggingElement = currentTarget
-        ghostElement = currentTarget.cloneNode(true)
-        const startPosition = this.positionData[currentTarget.getAttribute('data-key')]
+      if (dragNode && dragNode !== this.rootNode) {
+        this.draggingElement = dragNode
+        ghostElement = dragNode.cloneNode(true)
+        const startPosition = this.positionData[dragNode.getAttribute('data-key')]
         ghostElementX = startPosition.left
         ghostElementY = startPosition.top
-      })
+      }
     })
     rootNodeContainer.addEventListener('mousemove', e => {
       if (this.draggingElement) {
@@ -518,16 +520,17 @@ class TreeChart {
 
   followScroll({ left, top, right, bottom }) {
     const container = this.container
+    const distance = this.options.scrollTriggerDistance
     let direct = ''
     const hasRightContent = container.scrollWidth - container.scrollLeft > container.clientWidth
     const hasBottomContent = container.scrollHeight - container.scrollTop > container.clientHeight
-    if (container.scrollLeft > 0 && left < container.scrollLeft + 50) {
+    if (container.scrollLeft > 0 && left < container.scrollLeft + distance) {
       direct = 'Left'
-    } else if (container.scrollTop > 0 && top < container.scrollTop + 50) {
+    } else if (container.scrollTop > 0 && top < container.scrollTop + distance) {
       direct = 'Top'
-    } else if (hasRightContent && container.clientWidth + container.scrollLeft - 50 < right) {
+    } else if (hasRightContent && container.clientWidth + container.scrollLeft - distance < right) {
       direct = 'Right'
-    } else if (hasBottomContent && container.clientHeight + container.scrollTop - 50 < bottom) {
+    } else if (hasBottomContent && container.clientHeight + container.scrollTop - distance < bottom) {
       direct = 'Bottom'
     } else {
       return this.stopFollowScroll()
