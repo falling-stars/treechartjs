@@ -405,10 +405,10 @@ class TreeChart {
       return null
     }
 
-    const getRangeList = (startItem, data, direct = 'after') => {
+    const getRangeList = (flagItem, data, direct = 'after') => {
       let result = []
-      !isNaN(startItem) && data.list.forEach(item => {
-        if (direct === 'before' ? item <= startItem : item >= startItem) {
+      flagItem && data.list.forEach(item => {
+        if (direct === 'before' ? item <= flagItem : item >= flagItem) {
           result = result.concat(data[item])
         }
       })
