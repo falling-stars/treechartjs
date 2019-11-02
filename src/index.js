@@ -230,6 +230,18 @@ class TreeChart {
       const collideNode = this.getCollideNode(ghostElementPosition)
       collideNode && this.createDragEffect(collideNode, ghostElementPosition)
     }
+    const cancelDragging = () => {
+      if (!this.draggingElement) return
+      rootNodeContainer.classList.remove('cursor-move')
+      this.draggingElement = null
+      ghostElement = null
+      ghostContainer.innerHTML = ''
+      ghostElementX = 0
+      ghostElementY = 0
+      removeEffect()
+      this.resize()
+      this.stopFollowScroll()
+    }
 
     rootNodeContainer.addEventListener('mousedown', e => {
       const dragNode = e.path.find(el => el.nodeType === 1 && el.classList.contains('tree-chart-content'))
@@ -258,17 +270,8 @@ class TreeChart {
         this.followScroll(ghostPosition)
       }
     })
-    rootNodeContainer.addEventListener('mouseup', e => {
-      rootNodeContainer.classList.remove('cursor-move')
-      this.draggingElement = null
-      ghostElement = null
-      ghostContainer.innerHTML = ''
-      ghostElementX = 0
-      ghostElementY = 0
-      removeEffect()
-      this.resize()
-      this.stopFollowScroll()
-    })
+    rootNodeContainer.addEventListener('mouseup', cancelDragging)
+    window.addEventListener('mouseup', cancelDragging)
 
     // 考虑滚动情况
     const oldScroll = {
