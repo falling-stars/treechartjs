@@ -16,9 +16,9 @@ class TreeChart {
       options
     )
     this.draggable = this.options.draggable
-    this.container = options.container
-    this.container.classList.add('tree-chart')
-    this.createNodes(options.data, this.container, true)
+    this.rootContainer = options.container
+    this.rootContainer.classList.add('tree-chart')
+    this.createNodes(options.data, this.rootContainer, true)
     this.createLink()
     if (this.draggable) {
       this.setPositionData('sort')
@@ -84,13 +84,13 @@ class TreeChart {
 
   // 根据节点间父子关系生成连线信息
   createLink() {
-    const container = this.container
+    const rootContainer = this.rootContainer
     const linkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     this.linkContainer = linkContainer
     linkContainer.classList.add('tree-chart-link-container')
-    container.appendChild(linkContainer)
+    rootContainer.appendChild(linkContainer)
 
-    const { left: offsetLeftValue, top: offsetTopValue } = container.getBoundingClientRect()
+    const { left: offsetLeftValue, top: offsetTopValue } = rootContainer.getBoundingClientRect()
 
     const nodeList = document.querySelectorAll('.tree-chart-content')
     for (const item of nodeList) {
@@ -192,102 +192,108 @@ class TreeChart {
 
   // 绑定拖动事件
   setDrag() {
-    this.draggingElement = null
     const rootNodeContainer = this.rootNodeContainer
-    const container = this.container
+    const rootContainer = this.rootContainer
 
-    // 设置镜像效果
+    // 设置镜像层
     const ghostContainer = document.createElement('div')
     ghostContainer.classList.add('tree-chart-ghost-container')
-    this.container.appendChild(ghostContainer)
-    this.ghostContainer = ghostContainer
+    rootContainer.appendChild(ghostContainer)
 
-    let ghostElement = null
-    let ghostElementX = 0
-    let ghostElementY = 0
-
-    const getGhostPosition = () => {
-      return {
-        left: ghostElementX,
-        top: ghostElementY,
-        right: ghostElementX + ghostElement.offsetWidth,
-        bottom: ghostElementY + ghostElement.offsetHeight
-      }
-    }
-
-    // 清除原先的交互效果
-    const removeEffect = () => {
-      const tempLink = this.linkContainer.querySelector('.line-from-to')
-      tempLink && this.linkContainer.removeChild(tempLink)
-      document.querySelectorAll('.collide-node').forEach(node => {
-        node.classList.remove('become-previous', 'become-next', 'become-child')
-      })
-      const tempChildrenContainer = document.querySelector('.temp-children-container')
-      tempChildrenContainer && tempChildrenContainer.parentElement.removeChild(tempChildrenContainer)
-    }
-    const setEffect = ghostElementPosition => {
-      removeEffect()
-      const collideNode = this.getCollideNode(ghostElementPosition)
-      collideNode && this.createDragEffect(collideNode, ghostElementPosition)
-    }
-    const cancelDragging = () => {
-      if (!this.draggingElement) return
-      rootNodeContainer.classList.remove('cursor-move')
-      this.draggingElement = null
-      ghostElement = null
-      ghostContainer.innerHTML = ''
-      ghostElementX = 0
-      ghostElementY = 0
-      removeEffect()
-      this.resize()
-      this.stopFollowScroll()
+    const dragData = this.dragData = {
+      element: null,
+      ghostContainer,
+      ghostElement: null,
+      ghostTranslateX: 0,
+      ghostTranslateY: 0,
+      // mousedown事件在节点的触发位置
+      eventOffsetX: 0,
+      eventOffsetY: 0
     }
 
     rootNodeContainer.addEventListener('mousedown', e => {
       const dragNode = e.path.find(el => el.nodeType === 1 && el.classList.contains('tree-chart-content'))
-      // 根节点无法拖动
+      // 根节点不允许拖动
       if (dragNode && dragNode !== this.rootNode) {
-        this.draggingElement = dragNode
-        ghostElement = dragNode.cloneNode(true)
-        const startPosition = this.positionData[dragNode.getAttribute('data-key')]
-        ghostElementX = startPosition.left
-        ghostElementY = startPosition.top
+        dragData.element = dragNode
+        dragData.ghostElement = dragNode.cloneNode(true)
+        const { left, top } = this.positionData[dragNode.getAttribute('data-key')]
+        dragData.eventOffsetX = e.clientX + rootContainer.scrollLeft - left
+        dragData.eventOffsetY = e.clientY + rootContainer.scrollTop - top
       }
     })
     rootNodeContainer.addEventListener('mousemove', e => {
-      if (this.draggingElement) {
+      if (dragData.element) {
         // 清除文字选择对拖动的影响
         getSelection ? getSelection().removeAllRanges() : document.selection.empty()
         rootNodeContainer.classList.add('cursor-move')
-        // 添加拖动镜像
-        !ghostContainer.contains(ghostElement) && ghostContainer.appendChild(ghostElement)
-        ghostElementX += e.movementX
-        ghostElementY += e.movementY
-        ghostElement.style.transform = `translate(${ ghostElementX }px, ${ ghostElementY }px)`
-        const ghostPosition = getGhostPosition()
-        setEffect(ghostPosition)
+        // 添加镜像元素
+        !dragData.ghostContainer.contains(dragData.ghostElement) && dragData.ghostContainer.appendChild(dragData.ghostElement)
+        dragData.ghostTranslateX = e.clientX + rootContainer.scrollLeft - dragData.eventOffsetX
+        dragData.ghostTranslateY = e.clientY + rootContainer.scrollTop - dragData.eventOffsetY
+        dragData.ghostElement.style.transform = `translate(${ dragData.ghostTranslateX }px, ${ dragData.ghostTranslateY }px)`
+        const ghostPosition = this.getGhostPosition()
+        this.setDragEffect(ghostPosition)
         // 跟随滚动
         this.followScroll(ghostPosition)
       }
     })
-    rootNodeContainer.addEventListener('mouseup', cancelDragging)
-    window.addEventListener('mouseup', cancelDragging)
+    rootNodeContainer.addEventListener('mouseup', () => {
+      console.log(dragData.element)
+    })
+
+    const cancelDrag = () => {
+      if (!dragData.element) return
+      this.rootNodeContainer.classList.remove('cursor-move')
+      dragData.element = null
+      dragData.ghostContainer.innerHTML = ''
+      dragData.ghostElement = null
+      dragData.ghostTranslateX = 0
+      dragData.ghostTranslateY = 0
+      dragData.eventOffsetX = 0
+      dragData.eventOffsetY = 0
+      this.removeDragEffect()
+      this.stopFollowScroll()
+      this.resize()
+    }
+    this.cancelDrag = cancelDrag.bind(this)
+    window.addEventListener('mouseup', this.cancelDrag)
 
     // 考虑滚动情况
     const oldScroll = {
-      top: container.scrollTop,
-      left: container.scrollLeft
+      top: rootContainer.scrollTop,
+      left: rootContainer.scrollLeft
     }
-    container.addEventListener('scroll', e => {
-      if (this.draggingElement && ghostElement) {
-        ghostElementY = ghostElementY + container.scrollTop - oldScroll.top
-        ghostElementX = ghostElementX + container.scrollLeft - oldScroll.left
-        ghostElement.style.transform = `translate(${ ghostElementX }px, ${ ghostElementY }px)`
-        setEffect(getGhostPosition())
+    rootContainer.addEventListener('scroll', () => {
+      if (dragData.element && dragData.ghostElement) {
+        dragData.ghostTranslateY = dragData.ghostTranslateY + rootContainer.scrollTop - oldScroll.top
+        dragData.ghostTranslateX = dragData.ghostTranslateX + rootContainer.scrollLeft - oldScroll.left
+        dragData.ghostElement.style.transform = `translate(${ dragData.ghostTranslateX }px, ${ dragData.ghostTranslateY }px)`
+        this.setDragEffect(this.getGhostPosition())
       }
-      oldScroll.top = container.scrollTop
-      oldScroll.left = container.scrollLeft
+      oldScroll.top = rootContainer.scrollTop
+      oldScroll.left = rootContainer.scrollLeft
     })
+  }
+
+  getGhostPosition() {
+    const dragData = this.dragData
+    return {
+      left: dragData.ghostTranslateX,
+      top: dragData.ghostTranslateY,
+      right: dragData.ghostTranslateX + dragData.ghostElement.offsetWidth,
+      bottom: dragData.ghostTranslateY + dragData.ghostElement.offsetHeight
+    }
+  }
+
+  removeDragEffect() {
+    const tempLink = this.linkContainer.querySelector('.line-from-to')
+    tempLink && this.linkContainer.removeChild(tempLink)
+    document.querySelectorAll('.collide-node').forEach(node => {
+      node.classList.remove('become-previous', 'become-next', 'become-child')
+    })
+    const tempChildrenContainer = document.querySelector('.temp-children-container')
+    tempChildrenContainer && tempChildrenContainer.parentElement.removeChild(tempChildrenContainer)
   }
 
   // 生成拖动效果
@@ -324,12 +330,12 @@ class TreeChart {
 
       // 禁止插入到后一个兄弟节点的上面
       if (insertType === 'previous') {
-        const nextContentContainer = this.draggingElement.parentElement.nextElementSibling
+        const nextContentContainer = this.dragData.element.parentElement.nextElementSibling
         if (nextContentContainer && nextContentContainer.querySelector('.tree-chart-content') === coverNode) insertType = 'child'
       }
       // 禁止插入到前一个兄弟节点的下面
       if (insertType === 'next') {
-        const previousContentContainer = this.draggingElement.parentElement.previousElementSibling
+        const previousContentContainer = this.dragData.element.parentElement.previousElementSibling
         if (previousContentContainer && previousContentContainer.querySelector('.tree-chart-content') === coverNode) insertType = 'child'
       }
 
@@ -394,7 +400,7 @@ class TreeChart {
 
   // 获取拖动过程中碰撞的元素
   getCollideNode({ left, right, top, bottom }) {
-    const draggingElementKey = this.draggingElement.getAttribute('data-key')
+    const draggingElementKey = this.dragData.element.getAttribute('data-key')
     // Find current collide contentElement position
     const searchCurrent = (target, list, searchLarge) => {
       const listLen = list.length
@@ -453,7 +459,7 @@ class TreeChart {
       }
     })
 
-    const draggingParentElement = this.draggingElement.parentElement
+    const draggingParentElement = this.dragData.element.parentElement
     // 两个区间求交集确定目标元素
     const collideNode = []
     leftTopCollide.forEach(item => {
@@ -504,36 +510,38 @@ class TreeChart {
     return collideNode[0].node
   }
 
+  setDragEffect(ghostElementPosition) {
+    this.removeDragEffect()
+    const collideNode = this.getCollideNode(ghostElementPosition)
+    collideNode && this.createDragEffect(collideNode, ghostElementPosition)
+  }
+
   resize() {
-    const rootNodeContainer = this.rootNodeContainer
-    this.containerWidth = rootNodeContainer.clientWidth
-    this.containerHeight = rootNodeContainer.clientHeight
-    this.linkContainer.setAttribute('width', `${ this.containerWidth }px`)
-    this.linkContainer.setAttribute('height', `${ this.containerHeight }px`)
-    if (this.ghostContainer) {
-      this.ghostContainer.style.width = `${ this.containerWidth }px`
-      this.ghostContainer.style.height = `${ this.containerHeight }px`
+    const { clientWidth, clientHeight } = this.rootNodeContainer
+    const linkContainer = this.linkContainer
+    linkContainer.setAttribute('width', `${ clientWidth }px`)
+    linkContainer.setAttribute('height', `${ clientHeight }px`)
+    if (this.dragData.ghostContainer) {
+      const ghostContainerStyle = this.dragData.ghostContainer.style
+      ghostContainerStyle.width = `${ clientWidth }px`
+      ghostContainerStyle.height = `${ clientHeight }px`
     }
   }
 
-  stopFollowScroll(clearDirect = true) {
-    this.foolowScrollData.interval && clearInterval(this.foolowScrollData.interval)
-    if (clearDirect) this.foolowScrollData.direct = ''
-  }
-
   followScroll({ left, top, right, bottom }) {
-    const container = this.container
+    const rootContainer = this.rootContainer
+    const { scrollLeft, scrollTop, clientWidth, clientHeight, scrollWidth, scrollHeight } = rootContainer
     const distance = this.options.scrollTriggerDistance
     let direct = ''
-    const hasRightContent = container.scrollWidth - container.scrollLeft > container.clientWidth
-    const hasBottomContent = container.scrollHeight - container.scrollTop > container.clientHeight
-    if (container.scrollLeft > 0 && left < container.scrollLeft + distance) {
+    const hasRightContent = scrollWidth - scrollLeft > clientWidth
+    const hasBottomContent = scrollHeight - scrollTop > clientHeight
+    if (scrollLeft > 0 && left < scrollLeft + distance) {
       direct = 'Left'
-    } else if (container.scrollTop > 0 && top < container.scrollTop + distance) {
+    } else if (scrollTop > 0 && top < scrollTop + distance) {
       direct = 'Top'
-    } else if (hasRightContent && container.clientWidth + container.scrollLeft - distance < right) {
+    } else if (hasRightContent && clientWidth + scrollLeft - distance < right) {
       direct = 'Right'
-    } else if (hasBottomContent && container.clientHeight + container.scrollTop - distance < bottom) {
+    } else if (hasBottomContent && clientHeight + scrollTop - distance < bottom) {
       direct = 'Bottom'
     } else {
       return this.stopFollowScroll()
@@ -544,30 +552,41 @@ class TreeChart {
       const scrollSpeed = this.options.scrollSpeed
       this.foolowScrollData.interval = setInterval(() => {
         if (direct === 'Left' || direct === 'Top') {
-          container[`scroll${ direct }`] -= scrollSpeed
+          rootContainer[`scroll${ direct }`] -= scrollSpeed
         } else {
           if (direct === 'Right') {
-            container.scrollLeft += scrollSpeed
+            rootContainer.scrollLeft += scrollSpeed
           } else {
-            container.scrollTop += scrollSpeed
+            rootContainer.scrollTop += scrollSpeed
           }
         }
         let stop = false
         switch (direct) {
           case 'Left':
-            stop = container.scrollLeft === 0
+            stop = scrollLeft === 0
             break
           case 'Top':
-            stop = container.scrollTop === 0
+            stop = scrollTop === 0
             break
           case 'Right':
-            stop = container.scrollLeft + container.clientWidth === container.scrollWidth
+            stop = scrollLeft + clientWidth === scrollWidth
             break
           case 'Bottom':
-            stop = !container.scrollTop > 0
+            stop = !scrollTop > 0
         }
         stop && this.stopFollowScroll()
       }, 20)
+    }
+  }
+
+  stopFollowScroll(clearDirect = true) {
+    this.foolowScrollData.interval && clearInterval(this.foolowScrollData.interval)
+    if (clearDirect) this.foolowScrollData.direct = ''
+  }
+
+  destroy() {
+    if (this.draggable) {
+      window.removeEventListener('mouseup', this.cancelDrag)
     }
   }
 }
