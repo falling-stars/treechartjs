@@ -85,14 +85,19 @@ class TreeChart {
   // 根据节点间父子关系生成连线信息
   createLink() {
     const rootContainer = this.rootContainer
-    const linkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    this.linkContainer = linkContainer
-    linkContainer.classList.add('tree-chart-link-container')
-    rootContainer.appendChild(linkContainer)
+    if (this.linkContainer) {
+      this.linkContainer.innerHTML = ''
+    } else {
+      const linkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      this.linkContainer = linkContainer
+      linkContainer.classList.add('tree-chart-link-container')
+      rootContainer.appendChild(linkContainer)
+    }
 
     const { left: offsetLeftValue, top: offsetTopValue } = rootContainer.getBoundingClientRect()
 
     const nodeList = document.querySelectorAll('.tree-chart-content')
+    this.draggable && this.setPositionData('init')
     for (const item of nodeList) {
       const childrenKeys = item.getAttribute('data-children')
       const itemLayout = item.getBoundingClientRect()
@@ -147,7 +152,7 @@ class TreeChart {
 
   // 生成节点位置信息
   setPositionData(operation, data) {
-    if (!this.positionData) {
+    if (!this.positionData || operation === 'init') {
       this.positionData = {
         left: {
           list: []
@@ -188,6 +193,10 @@ class TreeChart {
         }
       }
     }
+  }
+
+  reRender() {
+    this.createLink()
   }
 
   // 绑定拖动事件
@@ -239,7 +248,33 @@ class TreeChart {
       }
     })
     rootNodeContainer.addEventListener('mouseup', () => {
-      console.log(dragData.element)
+      const targetNode = document.querySelector('.collide-node')
+      if (targetNode) {
+        const targetNodeContainer = targetNode.parentElement
+        const dragNode = dragData.element
+        const dragNodeContainer = dragNode.parentElement
+        if (targetNode.classList.contains('become-previous')) {
+          targetNodeContainer.parentElement.insertBefore(dragNodeContainer, targetNodeContainer)
+        }
+        if (targetNode.classList.contains('become-next')) {
+          targetNodeContainer.parentElement.insertBefore(dragNodeContainer, targetNodeContainer.nextElementSibling)
+        }
+        if (targetNode.classList.contains('become-child')) {
+          const childContainer = targetNodeContainer.querySelector('.tree-chart-children-container:not(.temp-children-container)')
+          if (childContainer) {
+            childContainer.appendChild(dragNodeContainer)
+          } else {
+            // 没有任何子节点的话创建一个容器
+            const newChildContainer = document.createElement('div')
+            newChildContainer.classList.add('tree-chart-children-container')
+            newChildContainer.style.marginLeft = `${ this.options.distanceX }px`
+            newChildContainer.appendChild(dragNodeContainer)
+            targetNodeContainer.appendChild(newChildContainer)
+          }
+        }
+        // todo 分离节点移动方法和整体重绘方法
+        this.reRender()
+      }
     })
 
     const cancelDrag = () => {
@@ -289,9 +324,8 @@ class TreeChart {
   removeDragEffect() {
     const tempLink = this.linkContainer.querySelector('.line-from-to')
     tempLink && this.linkContainer.removeChild(tempLink)
-    document.querySelectorAll('.collide-node').forEach(node => {
-      node.classList.remove('become-previous', 'become-next', 'become-child')
-    })
+    const collideNode = document.querySelector('.collide-node')
+    collideNode && collideNode.classList.remove('collide-node', 'become-previous', 'become-next', 'become-child')
     const tempChildrenContainer = document.querySelector('.temp-children-container')
     tempChildrenContainer && tempChildrenContainer.parentElement.removeChild(tempChildrenContainer)
   }
