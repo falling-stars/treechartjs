@@ -21,7 +21,6 @@ class TreeChart {
     this.createNodes(options.data, this.rootContainer, true)
     this.createLink()
     if (this.draggable) {
-      this.setPositionData('sort')
       this.setDrag()
       this.foolowScrollData = {
         interval: null,
@@ -85,6 +84,7 @@ class TreeChart {
   // 根据节点间父子关系生成连线信息
   createLink() {
     const rootContainer = this.rootContainer
+    const rootNodeContainer = this.rootNodeContainer
     if (this.linkContainer) {
       this.linkContainer.innerHTML = ''
     } else {
@@ -95,38 +95,40 @@ class TreeChart {
     }
 
     const { left: offsetLeftValue, top: offsetTopValue } = rootContainer.getBoundingClientRect()
+    const { scrollLeft, scrollTop } = rootContainer
+    const nodeList = rootNodeContainer.querySelectorAll('.tree-chart-content')
 
-    const nodeList = document.querySelectorAll('.tree-chart-content')
-    this.draggable && this.setPositionData('init')
+    this.setPositionData('init')
     for (const item of nodeList) {
       const childrenKeys = item.getAttribute('data-children')
       const itemLayout = item.getBoundingClientRect()
-      const itemKey = item.getAttribute('data-key')
+      const itemKey = this.getKey(item)
       if (childrenKeys) {
         const from = {
-          x: itemLayout.left - offsetLeftValue + item.offsetWidth,
-          y: itemLayout.top - offsetTopValue + item.offsetHeight / 2,
+          x: itemLayout.left - offsetLeftValue + item.offsetWidth + scrollLeft,
+          y: itemLayout.top - offsetTopValue + item.offsetHeight / 2 + scrollTop,
           key: itemKey
         }
         childrenKeys.split(',').forEach(childKey => {
-          const childrenElement = document.querySelector(`.tree-chart-item-${ childKey }`)
+          const childrenElement = rootNodeContainer.querySelector(`.tree-chart-item-${ childKey }`)
           const childrenLayout = childrenElement.getBoundingClientRect()
           const to = {
-            x: childrenLayout.left - offsetLeftValue,
-            y: childrenLayout.top - offsetTopValue + childrenElement.offsetHeight / 2,
+            x: childrenLayout.left - offsetLeftValue + scrollLeft,
+            y: childrenLayout.top - offsetTopValue + childrenElement.offsetHeight / 2 + scrollTop,
             key: childKey
           }
           this.drawLine(from, to)
         })
       }
       this.draggable && this.setPositionData('add', {
-        left: itemLayout.left - offsetLeftValue,
-        right: itemLayout.right - offsetLeftValue,
-        top: itemLayout.top - offsetTopValue,
-        bottom: itemLayout.bottom - offsetTopValue,
+        left: itemLayout.left - offsetLeftValue + scrollLeft,
+        right: itemLayout.right - offsetLeftValue + scrollLeft,
+        top: itemLayout.top - offsetTopValue + scrollTop,
+        bottom: itemLayout.bottom - offsetTopValue + scrollTop,
         key: itemKey
       })
     }
+    this.draggable && this.setPositionData('sort')
   }
 
   // 两点间连线
@@ -152,7 +154,7 @@ class TreeChart {
 
   // 生成节点位置信息
   setPositionData(operation, data) {
-    if (!this.positionData || operation === 'init') {
+    if (operation === 'init') {
       this.positionData = {
         left: {
           list: []
@@ -195,7 +197,70 @@ class TreeChart {
     }
   }
 
-  reRender() {
+  reRender(data) {
+    this.rootNodeContainer.innerHTML = ''
+    this.createNodes(data, this.rootContainer, false)
+    this.resize()
+    this.createLink()
+  }
+
+  getKey(node) {
+    return node.getAttribute('data-key')
+  }
+
+  getParentNode(node) {
+    if (node.nodeType === 1) {
+      return node.parentElement.parentElement.previousElementSibling
+    }
+  }
+
+  moveNode(target, origin, type) {
+    const targetNode = target.nodeType === 1 ? target : document.querySelector(`tree-chart-item-${ target }`)
+    const targetNodeContainer = targetNode.parentElement
+    const targetParentNode = this.getParentNode(targetNode)
+
+    const originNode = origin.nodeType === 1 ? origin : document.querySelector(`tree-chart-item-${ origin }`)
+    const originNodeContainer = originNode.parentElement
+    const originKey = this.getKey(originNode)
+    const originParentNode = this.getParentNode(originNode)
+
+    if (type === 'child') {
+      const childContainer = targetNodeContainer.querySelector('.tree-chart-children-container')
+      // 本身存在子节点的情况
+      if (childContainer) {
+        childContainer.appendChild(originNodeContainer)
+        const childKeyStr = targetNode.getAttribute('data-children') || ''
+        targetNode.setAttribute('data-children', `${ childKeyStr },${ originKey }`)
+      } else {
+        // 没有任何子节点的话创建一个容器
+        const newChildContainer = document.createElement('div')
+        newChildContainer.classList.add('tree-chart-children-container')
+        newChildContainer.style.marginLeft = `${ this.options.distanceX }px`
+        newChildContainer.appendChild(originNodeContainer)
+        targetNodeContainer.appendChild(newChildContainer)
+        targetNode.setAttribute('data-children', originKey)
+      }
+    }
+    if (type === 'previous') {
+      targetNodeContainer.parentElement.insertBefore(originNodeContainer, targetNodeContainer)
+      targetParentNode.setAttribute('data-children', `${ targetParentNode.getAttribute('data-children') },${originKey}`)
+    }
+    if (type === 'next') {
+      targetNodeContainer.parentElement.insertBefore(originNodeContainer, targetNodeContainer.nextElementSibling)
+      targetParentNode.setAttribute('data-children', `${ targetParentNode.getAttribute('data-children') },${originKey}`)
+    }
+
+    // 删除原先的节点的data-children
+    const oldChildrenKeys = originParentNode.getAttribute('data-children').split(',')
+    if (oldChildrenKeys.length > 1) {
+      oldChildrenKeys.splice(oldChildrenKeys.indexOf(originKey), 1)
+      originParentNode.setAttribute('data-children', oldChildrenKeys.join())
+    } else {
+      originParentNode.removeAttribute('data-children')
+      originParentNode.parentElement.removeChild(originParentNode.nextElementSibling)
+    }
+
+    this.resize()
     this.createLink()
   }
 
@@ -226,7 +291,7 @@ class TreeChart {
       if (dragNode && dragNode !== this.rootNode) {
         dragData.element = dragNode
         dragData.ghostElement = dragNode.cloneNode(true)
-        const { left, top } = this.positionData[dragNode.getAttribute('data-key')]
+        const { left, top } = this.positionData[this.getKey(dragNode)]
         dragData.eventOffsetX = e.clientX + rootContainer.scrollLeft - left
         dragData.eventOffsetY = e.clientY + rootContainer.scrollTop - top
       }
@@ -250,30 +315,13 @@ class TreeChart {
     rootNodeContainer.addEventListener('mouseup', () => {
       const targetNode = document.querySelector('.collide-node')
       if (targetNode) {
-        const targetNodeContainer = targetNode.parentElement
         const dragNode = dragData.element
-        const dragNodeContainer = dragNode.parentElement
-        if (targetNode.classList.contains('become-previous')) {
-          targetNodeContainer.parentElement.insertBefore(dragNodeContainer, targetNodeContainer)
-        }
-        if (targetNode.classList.contains('become-next')) {
-          targetNodeContainer.parentElement.insertBefore(dragNodeContainer, targetNodeContainer.nextElementSibling)
-        }
-        if (targetNode.classList.contains('become-child')) {
-          const childContainer = targetNodeContainer.querySelector('.tree-chart-children-container:not(.temp-children-container)')
-          if (childContainer) {
-            childContainer.appendChild(dragNodeContainer)
-          } else {
-            // 没有任何子节点的话创建一个容器
-            const newChildContainer = document.createElement('div')
-            newChildContainer.classList.add('tree-chart-children-container')
-            newChildContainer.style.marginLeft = `${ this.options.distanceX }px`
-            newChildContainer.appendChild(dragNodeContainer)
-            targetNodeContainer.appendChild(newChildContainer)
-          }
-        }
-        // todo 分离节点移动方法和整体重绘方法
-        this.reRender()
+        let type = ''
+        if (targetNode.classList.contains('become-previous')) type = 'previous'
+        if (targetNode.classList.contains('become-next')) type = 'next'
+        if (targetNode.classList.contains('become-child')) type = 'child'
+        this.cancelDrag()
+        this.moveNode(targetNode, dragNode, type)
       }
     })
 
@@ -336,7 +384,7 @@ class TreeChart {
     let from = null
     let to = null
 
-    const coverNodeKey = coverNode.getAttribute('data-key')
+    const coverNodeKey = this.getKey(coverNode)
     const { top: coverNodeTop, bottom: coverNodeBottom, left: coverNodeLeft, right: coverNodeRight } = this.positionData[coverNodeKey]
 
     // 如果被覆盖的是根节点的话只允许作为子节点插入
@@ -348,7 +396,7 @@ class TreeChart {
       const topPositionValue = coverNodeTop + offsetValue
       const bottomPositionValue = coverNodeBottom - offsetValue
 
-      const parentKey = coverNode.parentElement.parentElement.previousElementSibling.getAttribute('data-key')
+      const parentKey = this.getKey(this.getParentNode(coverNode))
       const parentPosition = this.positionData[parentKey]
 
       if (ghostBottom <= topPositionValue) {
@@ -359,7 +407,12 @@ class TreeChart {
         insertType = 'next'
       } else {
         // 作为子节点插入
-        insertType = 'child'
+        // 忽略拖到父节点的行为
+        if (coverNode !== this.getParentNode(this.dragData.element)) {
+          insertType = 'child'
+        } else {
+          insertType = 'next'
+        }
       }
 
       // 禁止插入到后一个兄弟节点的上面
@@ -397,7 +450,7 @@ class TreeChart {
       // 有子节点的情况
       if (coverNode.nextElementSibling) {
         const childNodeList = coverNode.nextElementSibling.childNodes
-        const insertPreviousKey = childNodeList[childNodeList.length - 1].querySelector('.tree-chart-content').getAttribute('data-key')
+        const insertPreviousKey = this.getKey(childNodeList[childNodeList.length - 1].querySelector('.tree-chart-content'))
         const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData[insertPreviousKey]
         to = {
           x: childPreviousLeft,
@@ -434,7 +487,7 @@ class TreeChart {
 
   // 获取拖动过程中碰撞的元素
   getCollideNode({ left, right, top, bottom }) {
-    const draggingElementKey = this.dragData.element.getAttribute('data-key')
+    const draggingElementKey = this.getKey(this.dragData.element)
     // Find current collide contentElement position
     const searchCurrent = (target, list, searchLarge) => {
       const listLen = list.length
@@ -493,16 +546,13 @@ class TreeChart {
       }
     })
 
-    const draggingParentElement = this.dragData.element.parentElement
     // 两个区间求交集确定目标元素
     const collideNode = []
     leftTopCollide.forEach(item => {
       if (!rightBottomCollide.includes(item)) return
       const node = document.querySelector(`.tree-chart-item-${ item }`)
       // 不可拖到子节点上
-      if (draggingParentElement.contains(node)) return
-      // 不可拖到第一个父节点上
-      if (draggingParentElement.parentElement.previousElementSibling === node) return
+      if (this.dragData.element.parentElement.contains(node)) return
       collideNode.push({ node, key: item, position: this.positionData[item] })
     })
 
