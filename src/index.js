@@ -11,7 +11,8 @@ class TreeChart {
         smooth: 50,
         scrollSpeed: 8,
         // 触发滚动的距离
-        scrollTriggerDistance: 50
+        scrollTriggerDistance: 50,
+        unfold: false
       },
       options
     )
@@ -19,6 +20,7 @@ class TreeChart {
     this.rootContainer = options.container
     this.rootContainer.classList.add('tree-chart')
     this.createNodes(options.data, this.rootContainer, true)
+    this.setUnfold()
     this.createLink()
     if (this.draggable) {
       this.setDrag()
@@ -53,6 +55,13 @@ class TreeChart {
       }
     } else {
       content.innerText = 'Please set contentRender function'
+    }
+
+    if (options.unfold) {
+      const unfoldElement = document.createElement('div')
+      unfoldElement.classList.add('tree-chart-unfold')
+      unfoldElement.innerHTML = '<div></div><div></div>'
+      content.appendChild(unfoldElement)
     }
 
     contentContainer.appendChild(content)
@@ -152,6 +161,20 @@ class TreeChart {
     link.setAttribute('d', `M${ M } Q${ Q1 } ${ Q2 } T ${ L }`)
   }
 
+  setUnfold() {
+    this.rootNodeContainer.addEventListener('click', ({ target }) => {
+      if (!target.classList.contains('tree-chart-unfold')) return
+      const childNodeContainer = target.parentElement.nextElementSibling
+      if (target.classList.contains('can-unfold')) {
+        childNodeContainer.classList.remove('is-hidden')
+        target.classList.remove('can-unfold')
+      } else {
+        childNodeContainer.classList.add('is-hidden')
+        target.classList.add('can-unfold')
+      }
+    })
+  }
+
   // 生成节点位置信息
   setPositionData(operation, data) {
     if (operation === 'init') {
@@ -200,6 +223,7 @@ class TreeChart {
   reRender(data) {
     this.rootNodeContainer.innerHTML = ''
     this.createNodes(data, this.rootContainer, false)
+    this.setUnfold()
     this.resize()
     this.createLink()
   }
@@ -243,11 +267,11 @@ class TreeChart {
     }
     if (type === 'previous') {
       targetNodeContainer.parentElement.insertBefore(originNodeContainer, targetNodeContainer)
-      targetParentNode.setAttribute('data-children', `${ targetParentNode.getAttribute('data-children') },${originKey}`)
+      targetParentNode.setAttribute('data-children', `${ targetParentNode.getAttribute('data-children') },${ originKey }`)
     }
     if (type === 'next') {
       targetNodeContainer.parentElement.insertBefore(originNodeContainer, targetNodeContainer.nextElementSibling)
-      targetParentNode.setAttribute('data-children', `${ targetParentNode.getAttribute('data-children') },${originKey}`)
+      targetParentNode.setAttribute('data-children', `${ targetParentNode.getAttribute('data-children') },${ originKey }`)
     }
 
     // 删除原先的节点的data-children
@@ -286,6 +310,8 @@ class TreeChart {
     }
 
     rootNodeContainer.addEventListener('mousedown', e => {
+      // 忽略展开按钮
+      if (e.target.classList.contains('tree-chart-unfold')) return
       const dragNode = e.path.find(el => el.nodeType === 1 && el.classList.contains('tree-chart-content'))
       // 根节点不允许拖动
       if (dragNode && dragNode !== this.rootNode) {

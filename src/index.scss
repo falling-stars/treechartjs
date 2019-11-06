@@ -16,6 +16,9 @@
   .tree-chart-children-container {
     vertical-align: middle;
     display: inline-block;
+    &.is-hidden {
+      display: none;
+    }
     > .tree-chart-container {
       display: block;
     }
@@ -29,6 +32,7 @@
     }
   }
   .tree-chart-content {
+    position: relative;
     display: inline-block;
     vertical-align: middle;
     &.become-child {
@@ -114,6 +118,49 @@
     pointer-events: none;
     .tree-chart-content {
       opacity: 0.5;
+    }
+  }
+  .tree-chart-unfold {
+    cursor: pointer;
+    position: absolute;
+    right: -11px;
+    top: calc(50% - 6px);
+    width: 11px;
+    height: 11px;
+    border: solid 1px black;
+    border-radius: 50%;
+    box-sizing: border-box;
+    background-color: white;
+    &:hover {
+      border-color: #ff9a36;
+      div {
+        background-color: #ff9a36;
+      }
+    }
+    div {
+      pointer-events: none;
+      position: absolute;
+      background-color: black;
+      &:first-child {
+        left: 0;
+        top: calc(50% - 1px);
+        width: 100%;
+        height: 1px;
+      }
+      &:last-child {
+        display: none;
+        left: calc(50% - 1px);
+        top: 0;
+        width: 1px;
+        height: 100%;
+      }
+    }
+    &.can-unfold {
+      div {
+        &:last-child {
+          display: block;
+        }
+      }
     }
   }
 }
