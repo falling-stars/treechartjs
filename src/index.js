@@ -35,6 +35,7 @@ class TreeChart {
   // 数据数据结构生成节点
   createNodes(data, parentNode, isRoot) {
     const options = this.options
+    const existChildren = Array.isArray(data.children) && data.children.length
 
     const contentContainer = document.createElement('div')
     contentContainer.classList.add('tree-chart-container')
@@ -57,7 +58,8 @@ class TreeChart {
       content.innerText = 'Please set contentRender function'
     }
 
-    if (options.unfold) {
+    // 创建展开收起按钮
+    if (existChildren && options.unfold) {
       const unfoldElement = document.createElement('div')
       unfoldElement.classList.add('tree-chart-unfold')
       unfoldElement.innerHTML = '<div></div><div></div>'
@@ -74,7 +76,7 @@ class TreeChart {
       this.rootNodeContainer = contentContainer
     }
 
-    if (Array.isArray(data.children) && data.children.length) {
+    if (existChildren) {
       const childrenContainer = document.createElement('div')
       childrenContainer.classList.add('tree-chart-children-container')
       childrenContainer.style.marginLeft = `${ options.distanceX }px`
@@ -112,7 +114,9 @@ class TreeChart {
       const childrenKeys = item.getAttribute('data-children')
       const itemLayout = item.getBoundingClientRect()
       const itemKey = this.getKey(item)
-      if (childrenKeys) {
+      const childrenNodeContainer = item.nextElementSibling
+      // 忽略收起状态的节点
+      if (childrenKeys && !childrenNodeContainer.classList.contains('is-hidden')) {
         const from = {
           x: itemLayout.left - offsetLeftValue + item.offsetWidth + scrollLeft,
           y: itemLayout.top - offsetTopValue + item.offsetHeight / 2 + scrollTop,
@@ -172,6 +176,7 @@ class TreeChart {
         childNodeContainer.classList.add('is-hidden')
         target.classList.add('can-unfold')
       }
+      this.reloadLink()
     })
   }
 
@@ -224,6 +229,10 @@ class TreeChart {
     this.rootNodeContainer.innerHTML = ''
     this.createNodes(data, this.rootContainer, false)
     this.setUnfold()
+    this.reloadLink()
+  }
+
+  reloadLink() {
     this.resize()
     this.createLink()
   }
@@ -236,6 +245,18 @@ class TreeChart {
     if (node.nodeType === 1) {
       return node.parentElement.parentElement.previousElementSibling
     }
+  }
+
+  getPreviousSiblingNode(node) {
+    const nodeContainer = node.parentElement.previousElementSibling
+    if (nodeContainer) return nodeContainer.querySelector('.tree-chart-content')
+    return null
+  }
+
+  getNextSiblingNode(node) {
+    const nodeContainer = node.parentElement.nextElementSibling
+    if (nodeContainer) return nodeContainer.querySelector('.tree-chart-content')
+    return null
   }
 
   moveNode(target, origin, type) {
@@ -284,8 +305,7 @@ class TreeChart {
       originParentNode.parentElement.removeChild(originParentNode.nextElementSibling)
     }
 
-    this.resize()
-    this.createLink()
+    this.reloadLink()
   }
 
   // 绑定拖动事件
@@ -433,24 +453,17 @@ class TreeChart {
         insertType = 'next'
       } else {
         // 作为子节点插入
-        // 忽略拖到父节点的行为
-        if (coverNode !== this.getParentNode(this.dragData.element)) {
-          insertType = 'child'
-        } else {
-          insertType = 'next'
-        }
+        insertType = 'child'
       }
 
-      // 禁止插入到后一个兄弟节点的上面
-      if (insertType === 'previous') {
-        const nextContentContainer = this.dragData.element.parentElement.nextElementSibling
-        if (nextContentContainer && nextContentContainer.querySelector('.tree-chart-content') === coverNode) insertType = 'child'
-      }
-      // 禁止插入到前一个兄弟节点的下面
-      if (insertType === 'next') {
-        const previousContentContainer = this.dragData.element.parentElement.previousElementSibling
-        if (previousContentContainer && previousContentContainer.querySelector('.tree-chart-content') === coverNode) insertType = 'child'
-      }
+      // 拖到父节点时只能作为兄弟节点插入
+      if (insertType === 'child' && coverNode === this.getParentNode(this.dragData.element)) insertType = 'next'
+      // 拖到收起状态的节点只能作为兄弟插入
+      if (insertType === 'child' && coverNode.querySelector('.can-unfold')) insertType = 'next'
+      // 禁止插入到下一个兄弟节点的上面
+      if (insertType === 'previous' && this.getNextSiblingNode(this.dragData.element) === coverNode) insertType = 'child'
+      // 禁止插入到上一个兄弟节点的下面
+      if (insertType === 'next' && this.getPreviousSiblingNode(this.dragData.element) === coverNode) insertType = 'child'
 
       if (insertType === 'previous' || insertType === 'next') {
         from = {
@@ -531,7 +544,7 @@ class TreeChart {
 
     const getRangeList = (flagItem, data, direct = 'after') => {
       let result = []
-      flagItem && data.list.forEach(item => {
+      !isNaN(flagItem) && data.list.forEach(item => {
         if (direct === 'before' ? item <= flagItem : item >= flagItem) {
           result = result.concat(data[item])
         }

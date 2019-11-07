@@ -119,6 +119,9 @@
     .tree-chart-content {
       opacity: 0.5;
     }
+    .tree-chart-unfold {
+      display: none;
+    }
   }
   .tree-chart-unfold {
     cursor: pointer;
