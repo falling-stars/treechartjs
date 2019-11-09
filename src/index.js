@@ -17,10 +17,11 @@ class TreeChart {
       options
     )
     this.draggable = this.options.draggable
+    this.unfold = this.options.unfold
     this.rootContainer = options.container
     this.rootContainer.classList.add('tree-chart')
     this.createNodes(options.data, this.rootContainer, true)
-    this.setUnfold()
+    this.unfold && this.setUnfold()
     this.createLink()
     if (this.draggable) {
       this.setDrag()
@@ -33,7 +34,7 @@ class TreeChart {
   }
 
   // 数据数据结构生成节点
-  createNodes(data, parentNode, isRoot) {
+  createNodes(data, parentNodeContainer, isRoot) {
     const options = this.options
     const existChildren = Array.isArray(data.children) && data.children.length
 
@@ -41,38 +42,35 @@ class TreeChart {
     contentContainer.classList.add('tree-chart-container')
     contentContainer.style.marginBottom = `${ options.distanceY }px`
 
-    const content = document.createElement('div')
-    content.classList.add('tree-chart-content', `tree-chart-item-${ data.id }`)
-    content.setAttribute('data-key', data.id)
+    const node = document.createElement('div')
+    node.classList.add('tree-chart-content', `tree-chart-item-${ data.id }`)
+    node.setAttribute('data-key', data.id)
     // 生成用户自定义模板
     if (typeof options.contentRender === 'function') {
       const renderResult = options.contentRender(data)
       if (typeof renderResult === 'string') {
-        content.innerHTML = renderResult
+        node.innerHTML = `<div>${ renderResult }</div>`
       } else if (typeof renderResult === 'object' && renderResult.nodeType === 1) {
-        content.appendChild(renderResult)
+        node.appendChild(renderResult)
       } else {
-        content.innerText = 'Please check contentrender return type is string or element'
+        node.innerText = 'Please check contentRender return type is string or element'
       }
     } else {
-      content.innerText = 'Please set contentRender function'
+      node.innerText = 'Please set contentRender function'
     }
 
     // 创建展开收起按钮
-    if (existChildren && options.unfold) {
-      const unfoldElement = document.createElement('div')
-      unfoldElement.classList.add('tree-chart-unfold')
-      unfoldElement.innerHTML = '<div></div><div></div>'
-      content.appendChild(unfoldElement)
+    if (existChildren && this.unfold) {
+      this.createUnfoldElement(node)
     }
 
-    contentContainer.appendChild(content)
-    parentNode.appendChild(contentContainer)
+    contentContainer.appendChild(node)
+    parentNodeContainer.appendChild(contentContainer)
 
     if (isRoot) {
       contentContainer.classList.add('is-node-container')
       this.draggable && contentContainer.classList.add('is-draggable')
-      this.rootNode = content
+      this.rootNode = node
       this.rootNodeContainer = contentContainer
     }
 
@@ -88,8 +86,15 @@ class TreeChart {
           this.createNodes(data.children[key], childrenContainer)
         }
       }
-      content.setAttribute('data-children', childrenKeys.join())
+      node.setAttribute('data-children', childrenKeys.join())
     }
+  }
+
+  createUnfoldElement(node) {
+    const unfoldElement = document.createElement('div')
+    unfoldElement.classList.add('tree-chart-unfold')
+    unfoldElement.innerHTML = '<div></div><div></div>'
+    node.appendChild(unfoldElement)
   }
 
   // 根据节点间父子关系生成连线信息
@@ -168,16 +173,28 @@ class TreeChart {
   setUnfold() {
     this.rootNodeContainer.addEventListener('click', ({ target }) => {
       if (!target.classList.contains('tree-chart-unfold')) return
-      const childNodeContainer = target.parentElement.nextElementSibling
-      if (target.classList.contains('can-unfold')) {
+      this.toggleFold(target)
+    })
+  }
+
+  toggleFold(target) {
+    let unfoldElement = null
+    if (typeof target === 'string') {
+      unfoldElement = document.querySelector(`.tree-chart-item-${ target } .tree-chart-unfold`)
+    } else {
+      unfoldElement = target
+    }
+    if (unfoldElement) {
+      const childNodeContainer = unfoldElement.parentElement.nextElementSibling
+      if (unfoldElement.classList.contains('can-unfold')) {
         childNodeContainer.classList.remove('is-hidden')
-        target.classList.remove('can-unfold')
+        unfoldElement.classList.remove('can-unfold')
       } else {
         childNodeContainer.classList.add('is-hidden')
-        target.classList.add('can-unfold')
+        unfoldElement.classList.add('can-unfold')
       }
       this.reloadLink()
-    })
+    }
   }
 
   // 生成节点位置信息
@@ -228,7 +245,7 @@ class TreeChart {
   reRender(data) {
     this.rootNodeContainer.innerHTML = ''
     this.createNodes(data, this.rootContainer, false)
-    this.setUnfold()
+    this.unfold && this.setUnfold()
     this.reloadLink()
   }
 
@@ -303,6 +320,20 @@ class TreeChart {
     } else {
       originParentNode.removeAttribute('data-children')
       originParentNode.parentElement.removeChild(originParentNode.nextElementSibling)
+    }
+
+    // 处理收起展开状态
+    if (this.unfold) {
+      // 节点被移除后没有子节点就移除展开元素
+      if (!originParentNode.nextElementSibling) {
+        const originUnfoldElement = originParentNode.querySelector('.tree-chart-unfold')
+        originUnfoldElement && originParentNode.removeChild(originUnfoldElement)
+      }
+      // 作为子节点插入的元素检测父新的父元素是否有展开按钮
+      if (type === 'child') {
+        const targetUnfoldElement = targetNode.querySelector('.tree-chart-unfold')
+        !targetUnfoldElement && this.createUnfoldElement(targetNode)
+      }
     }
 
     this.reloadLink()
