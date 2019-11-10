@@ -33,21 +33,14 @@ class TreeChart {
     this.resize()
   }
 
-  // 数据数据结构生成节点
-  createNodes(data, parentNodeContainer, isRoot) {
-    const options = this.options
-    const existChildren = Array.isArray(data.children) && data.children.length
-
-    const contentContainer = document.createElement('div')
-    contentContainer.classList.add('tree-chart-container')
-    contentContainer.style.marginBottom = `${ options.distanceY }px`
-
+  createNode(data) {
     const node = document.createElement('div')
     node.classList.add('tree-chart-content', `tree-chart-item-${ data.id }`)
     node.setAttribute('data-key', data.id)
     // 生成用户自定义模板
-    if (typeof options.contentRender === 'function') {
-      const renderResult = options.contentRender(data)
+    const contentRender = this.options.contentRender
+    if (typeof contentRender === 'function') {
+      const renderResult = contentRender(data)
       if (typeof renderResult === 'string') {
         node.innerHTML = `<div>${ renderResult }</div>`
       } else if (typeof renderResult === 'object' && renderResult.nodeType === 1) {
@@ -58,10 +51,23 @@ class TreeChart {
     } else {
       node.innerText = 'Please set contentRender function'
     }
+    return node
+  }
+
+  // 数据数据结构生成节点
+  createNodes(data, parentNodeContainer, isRoot) {
+    const options = this.options
+    const existChildren = Array.isArray(data.children) && data.children.length
+
+    const contentContainer = document.createElement('div')
+    contentContainer.classList.add('tree-chart-container')
+    contentContainer.style.marginBottom = `${ options.distanceY }px`
+
+    const node = this.createNode(data)
 
     // 创建展开收起按钮
     if (existChildren && this.unfold) {
-      this.createUnfoldElement(node)
+      this.addUnfoldElement(node)
     }
 
     contentContainer.appendChild(node)
@@ -90,7 +96,7 @@ class TreeChart {
     }
   }
 
-  createUnfoldElement(node) {
+  addUnfoldElement(node) {
     const unfoldElement = document.createElement('div')
     unfoldElement.classList.add('tree-chart-unfold')
     unfoldElement.innerHTML = '<div></div><div></div>'
@@ -332,7 +338,7 @@ class TreeChart {
       // 作为子节点插入的元素检测父新的父元素是否有展开按钮
       if (type === 'child') {
         const targetUnfoldElement = targetNode.querySelector('.tree-chart-unfold')
-        !targetUnfoldElement && this.createUnfoldElement(targetNode)
+        !targetUnfoldElement && this.addUnfoldElement(targetNode)
       }
     }
 
