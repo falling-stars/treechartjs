@@ -8,7 +8,10 @@ module.exports = {
     index: ['babel-polyfill', resolve(__dirname, `./src/${ isDevelopment ? 'test' : '' }`)]
   },
   output: {
-    path: resolve(__dirname, './dist')
+    path: resolve(__dirname, './dist'),
+    library: 'TreeChart',
+    libraryExport: 'default',
+    libraryTarget: 'umd'
   },
   module: {
     rules: [
