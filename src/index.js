@@ -386,6 +386,16 @@ class TreeChart {
     this.reloadLink()
   }
 
+  getMousedownNode(target) {
+    if (target.classList.contains('tree-chart-content')) return target
+    let searchElement = target
+    while (this.rootNodeContainer !== searchElement) {
+      if (searchElement.classList.contains('tree-chart-content')) return searchElement
+      searchElement = searchElement.parentElement
+    }
+    return null
+  }
+
   // 绑定拖动事件
   setDrag() {
     const rootNodeContainer = this.rootNodeContainer
@@ -410,7 +420,7 @@ class TreeChart {
     rootNodeContainer.addEventListener('mousedown', e => {
       // 忽略展开按钮
       if (e.target.classList.contains('tree-chart-unfold')) return
-      const dragNode = e.path.find(el => el.nodeType === 1 && el.classList.contains('tree-chart-content'))
+      const dragNode = this.getMousedownNode(e.target)
       // 根节点不允许拖动
       if (dragNode && dragNode !== this.rootNode) {
         dragData.element = dragNode
