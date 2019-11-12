@@ -389,7 +389,9 @@ class TreeChart {
     this.reloadLink()
   }
 
-  getMousedownNode(target) {
+  getCurrentEventNode(target) {
+    // 忽略展开按钮
+    if (target.classList.contains('tree-chart-unfold')) return
     if (target.classList.contains('tree-chart-content')) return target
     let searchElement = target
     while (this.rootNodeContainer !== searchElement) {
@@ -401,6 +403,7 @@ class TreeChart {
 
   // 绑定拖动事件
   setDrag() {
+    const options = this.options
     const rootNodeContainer = this.rootNodeContainer
     const rootContainer = this.rootContainer
 
@@ -421,9 +424,7 @@ class TreeChart {
     }
 
     rootNodeContainer.addEventListener('mousedown', e => {
-      // 忽略展开按钮
-      if (e.target.classList.contains('tree-chart-unfold')) return
-      const dragNode = this.getMousedownNode(e.target)
+      const dragNode = this.getCurrentEventNode(e.target)
       // 根节点不允许拖动
       if (dragNode && dragNode !== this.rootNode) {
         dragData.element = dragNode
@@ -459,6 +460,10 @@ class TreeChart {
         if (targetNode.classList.contains('become-child')) type = 'child'
         this.cancelDrag()
         this.insertNode(targetNode, dragNode, type)
+        typeof options.ondragend === 'function' && options.ondragend(
+          { key: this.getKey(targetNode), element: targetNode },
+          { key: this.getKey(dragNode), element: dragNode },
+          type)
       }
     })
 
@@ -521,6 +526,7 @@ class TreeChart {
     let from = null
     let to = null
 
+    const dragElement = this.dragData.element
     const coverNodeKey = this.getKey(coverNode)
     const { top: coverNodeTop, bottom: coverNodeBottom, left: coverNodeLeft, right: coverNodeRight } = this.positionData[coverNodeKey]
 
@@ -548,13 +554,13 @@ class TreeChart {
       }
 
       // 拖到父节点时只能作为兄弟节点插入
-      if (insertType === 'child' && coverNode === this.getParentNode(this.dragData.element)) insertType = 'next'
+      if (insertType === 'child' && coverNode === this.getParentNode(dragElement)) insertType = 'next'
       // 拖到收起状态的节点只能作为兄弟插入
       if (insertType === 'child' && coverNode.querySelector('.can-unfold')) insertType = 'next'
       // 禁止插入到下一个兄弟节点的上面
-      if (insertType === 'previous' && this.getNextSiblingNode(this.dragData.element) === coverNode) insertType = 'child'
+      if (insertType === 'previous' && this.getNextSiblingNode(dragElement) === coverNode) insertType = 'child'
       // 禁止插入到上一个兄弟节点的下面
-      if (insertType === 'next' && this.getPreviousSiblingNode(this.dragData.element) === coverNode) insertType = 'child'
+      if (insertType === 'next' && this.getPreviousSiblingNode(dragElement) === coverNode) insertType = 'child'
 
       if (insertType === 'previous' || insertType === 'next') {
         from = {

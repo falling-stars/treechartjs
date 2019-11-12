@@ -51,6 +51,9 @@ new TreeChart({
   smooth: 60,
   scrollTriggerDistance: 30,
   unfold: true,
+  ondragend() {
+    console.log('dragend')
+  },
   contentRender(data) {
     const container = document.createElement('div')
     container.style.width = '290px'
