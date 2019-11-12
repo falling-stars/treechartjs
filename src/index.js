@@ -26,6 +26,7 @@ class TreeChart {
     this.createNodes(options.data, this.rootContainer, true)
     this.unfold && this.setUnfold()
     this.createLink()
+    this.setEventHook()
     if (this.draggable) {
       this.setDrag()
       this.foolowScrollData = {
@@ -41,20 +42,25 @@ class TreeChart {
     const key = this.getKey(data)
     node.classList.add('tree-chart-content', `tree-chart-item-${key}`)
     node.setAttribute('data-key', key)
+
+    const renderContainer = document.createElement('div')
+    renderContainer.classList.add('tree-render-container')
+
     // 生成用户自定义模板
     const contentRender = this.options.contentRender
     if (typeof contentRender === 'function') {
       const renderResult = contentRender(data)
       if (typeof renderResult === 'string') {
-        node.innerHTML = `<div>${renderResult}</div>`
+        renderContainer.innerHTML = renderResult
       } else if (isElement(renderResult)) {
-        node.appendChild(renderResult)
+        renderContainer.appendChild(renderResult)
       } else {
-        node.innerText = 'Please check contentRender return type is string or element'
+        renderContainer.innerText = 'Please check contentRender return type is string or element'
       }
     } else {
-      node.innerText = 'Please set contentRender function'
+      renderContainer.innerText = 'Please set contentRender function'
     }
+    node.appendChild(renderContainer)
     return node
   }
 
@@ -400,6 +406,32 @@ class TreeChart {
       searchElement = searchElement.parentElement
     }
     return null
+  }
+
+  setEventHook() {
+    const options = this.options
+    const rootNodeContainer = this.rootNodeContainer
+
+    if (typeof options.onclick === 'function') {
+      let oldNode = null
+
+      rootNodeContainer.addEventListener('mousedown', e => {
+        oldNode = this.getCurrentEventNode(e.target)
+      })
+      rootNodeContainer.addEventListener('mouseup', e => {
+        const node = this.getCurrentEventNode(e.target)
+        let notDrag = true
+        if (this.draggable) {
+          const { ghostTranslateX, ghostTranslateY } = this.dragData
+          if (ghostTranslateX !== 0 || ghostTranslateY !== 0) {
+            notDrag = false
+          }
+        }
+        if (node === oldNode && notDrag) {
+          node && options.onclick({ key: this.getKey(node), element: node }, e)
+        }
+      })
+    }
   }
 
   // 绑定拖动事件

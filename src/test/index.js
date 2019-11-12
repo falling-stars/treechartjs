@@ -54,6 +54,9 @@ new TreeChart({
   ondragend() {
     console.log('dragend')
   },
+  onclick() {
+    console.log('click')
+  },
   contentRender(data) {
     const container = document.createElement('div')
     container.style.width = '290px'
