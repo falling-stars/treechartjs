@@ -331,7 +331,7 @@ class TreeChart {
     } else {
       originNodeContainer = originNode.parentElement
     }
-    const originKey = isNewNode ? this.getKey(origin) : this.getKey(originNode)
+    const originKey = this.getKey(isNewNode ? origin : originNode)
     const originParentNode = this.getParentNode(originNode)
 
     if (type === 'child') {
