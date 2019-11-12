@@ -35,14 +35,14 @@ class TreeChart {
 
   createNode(data) {
     const node = document.createElement('div')
-    node.classList.add('tree-chart-content', `tree-chart-item-${ data.id }`)
+    node.classList.add('tree-chart-content', `tree-chart-item-${data.id}`)
     node.setAttribute('data-key', data.id)
     // 生成用户自定义模板
     const contentRender = this.options.contentRender
     if (typeof contentRender === 'function') {
       const renderResult = contentRender(data)
       if (typeof renderResult === 'string') {
-        node.innerHTML = `<div>${ renderResult }</div>`
+        node.innerHTML = `<div>${renderResult}</div>`
       } else if (typeof renderResult === 'object' && renderResult.nodeType === 1) {
         node.appendChild(renderResult)
       } else {
@@ -57,7 +57,7 @@ class TreeChart {
   createNodeContainer() {
     const nodeContainer = document.createElement('div')
     nodeContainer.classList.add('tree-chart-container')
-    nodeContainer.style.marginBottom = `${ this.options.distanceY }px`
+    nodeContainer.style.marginBottom = `${this.options.distanceY}px`
     return nodeContainer
   }
 
@@ -87,7 +87,7 @@ class TreeChart {
     if (existChildren) {
       const childrenContainer = document.createElement('div')
       childrenContainer.classList.add('tree-chart-children-container')
-      childrenContainer.style.marginLeft = `${ options.distanceX }px`
+      childrenContainer.style.marginLeft = `${options.distanceX}px`
       nodeContainer.appendChild(childrenContainer)
       const childrenKeys = []
       for (const key in data.children) {
@@ -138,7 +138,7 @@ class TreeChart {
           key: itemKey
         }
         childrenKeys.split(',').forEach(childKey => {
-          const childrenElement = rootNodeContainer.querySelector(`.tree-chart-item-${ childKey }`)
+          const childrenElement = rootNodeContainer.querySelector(`.tree-chart-item-${childKey}`)
           const childrenLayout = childrenElement.getBoundingClientRect()
           const to = {
             x: childrenLayout.left - offsetLeftValue + scrollLeft,
@@ -162,10 +162,10 @@ class TreeChart {
   // 两点间连线
   drawLine(from, to) {
     const options = this.options
-    const lineClassName = `line-${ from.key }-${ to.key }`
+    const lineClassName = `line-${from.key}-${to.key}`
     let link = null
-    if (document.querySelector(`.${ lineClassName }`)) {
-      link = document.querySelector(`.${ lineClassName }`)
+    if (document.querySelector(`.${lineClassName}`)) {
+      link = document.querySelector(`.${lineClassName}`)
     } else {
       link = document.createElementNS('http://www.w3.org/2000/svg', 'path')
       link.classList.add(lineClassName)
@@ -173,11 +173,11 @@ class TreeChart {
     }
     const centerX = (to.x - from.x) / 2
     const centerY = (to.y - from.y) / 2
-    const M = `${ from.x } ${ from.y }`
-    const L = `${ to.x } ${ to.y }`
-    const Q1 = `${ from.x + centerX - options.smooth / 100 * centerX } ${ from.y }`
-    const Q2 = `${ from.x + centerX } ${ from.y + centerY }`
-    link.setAttribute('d', `M${ M } Q${ Q1 } ${ Q2 } T ${ L }`)
+    const M = `${from.x} ${from.y}`
+    const L = `${to.x} ${to.y}`
+    const Q1 = `${from.x + centerX - options.smooth / 100 * centerX} ${from.y}`
+    const Q2 = `${from.x + centerX} ${from.y + centerY}`
+    link.setAttribute('d', `M${M} Q${Q1} ${Q2} T ${L}`)
   }
 
   setUnfold() {
@@ -190,7 +190,7 @@ class TreeChart {
   toggleFold(target) {
     let unfoldElement = null
     if (typeof target === 'string') {
-      unfoldElement = document.querySelector(`.tree-chart-item-${ target } .tree-chart-unfold`)
+      unfoldElement = document.querySelector(`.tree-chart-item-${target} .tree-chart-unfold`)
     } else {
       unfoldElement = target
     }
@@ -293,7 +293,7 @@ class TreeChart {
   }
 
   insertNode(target, origin, type) {
-    const targetNode = target.nodeType === 1 ? target : this.rootNodeContainer.querySelector(`.tree-chart-item-${ target }`)
+    const targetNode = target.nodeType === 1 ? target : this.rootNodeContainer.querySelector(`.tree-chart-item-${target}`)
     const targetNodeContainer = targetNode.parentElement
     const targetParentNode = this.getParentNode(targetNode)
 
@@ -306,7 +306,7 @@ class TreeChart {
     if (isNewNode) {
       originNode = this.createNode(origin)
     } else {
-      originNode = origin.nodeType === 1 ? origin : this.rootNodeContainer.querySelector(`tree-chart-item-${ origin }`)
+      originNode = origin.nodeType === 1 ? origin : this.rootNodeContainer.querySelector(`tree-chart-item-${origin}`)
     }
     let originNodeContainer = null
     if (isNewNode) {
@@ -324,12 +324,12 @@ class TreeChart {
       if (childContainer) {
         childContainer.appendChild(originNodeContainer)
         const childKeyStr = targetNode.getAttribute('data-children') || ''
-        targetNode.setAttribute('data-children', `${ childKeyStr },${ originKey }`)
+        targetNode.setAttribute('data-children', `${childKeyStr},${originKey}`)
       } else {
         // 没有任何子节点的话创建一个容器
         const newChildContainer = document.createElement('div')
         newChildContainer.classList.add('tree-chart-children-container')
-        newChildContainer.style.marginLeft = `${ this.options.distanceX }px`
+        newChildContainer.style.marginLeft = `${this.options.distanceX}px`
         newChildContainer.appendChild(originNodeContainer)
         targetNodeContainer.appendChild(newChildContainer)
         targetNode.setAttribute('data-children', originKey)
@@ -337,11 +337,11 @@ class TreeChart {
     }
     if (type === 'previous') {
       targetNodeContainer.parentElement.insertBefore(originNodeContainer, targetNodeContainer)
-      targetParentNode.setAttribute('data-children', `${ targetParentNode.getAttribute('data-children') },${ originKey }`)
+      targetParentNode.setAttribute('data-children', `${targetParentNode.getAttribute('data-children')},${originKey}`)
     }
     if (type === 'next') {
       targetNodeContainer.parentElement.insertBefore(originNodeContainer, targetNodeContainer.nextElementSibling)
-      targetParentNode.setAttribute('data-children', `${ targetParentNode.getAttribute('data-children') },${ originKey }`)
+      targetParentNode.setAttribute('data-children', `${targetParentNode.getAttribute('data-children')},${originKey}`)
     }
 
     // 删除原先的节点的data-children
@@ -416,7 +416,7 @@ class TreeChart {
         !dragData.ghostContainer.contains(dragData.ghostElement) && dragData.ghostContainer.appendChild(dragData.ghostElement)
         dragData.ghostTranslateX = e.clientX + rootContainer.scrollLeft - dragData.eventOffsetX
         dragData.ghostTranslateY = e.clientY + rootContainer.scrollTop - dragData.eventOffsetY
-        dragData.ghostElement.style.transform = `translate(${ dragData.ghostTranslateX }px, ${ dragData.ghostTranslateY }px)`
+        dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
         const ghostPosition = this.getGhostPosition()
         this.setDragEffect(ghostPosition)
         // 跟随滚动
@@ -462,7 +462,7 @@ class TreeChart {
       if (dragData.element && dragData.ghostElement) {
         dragData.ghostTranslateY = dragData.ghostTranslateY + rootContainer.scrollTop - oldScroll.top
         dragData.ghostTranslateX = dragData.ghostTranslateX + rootContainer.scrollLeft - oldScroll.left
-        dragData.ghostElement.style.transform = `translate(${ dragData.ghostTranslateX }px, ${ dragData.ghostTranslateY }px)`
+        dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
         this.setDragEffect(this.getGhostPosition())
       }
       oldScroll.top = rootContainer.scrollTop
@@ -543,7 +543,7 @@ class TreeChart {
         }
       }
     }
-    coverNode.classList.add(`become-${ insertType }`, 'collide-node')
+    coverNode.classList.add(`become-${insertType}`, 'collide-node')
 
     if (insertType === 'child') {
       from = {
@@ -565,15 +565,15 @@ class TreeChart {
         // 没有子节点的情况创建一个临时节点
         const childrenContainer = document.createElement('div')
         childrenContainer.classList.add('tree-chart-children-container', 'temp-children-container')
-        childrenContainer.style.marginLeft = `${ this.options.distanceX }px`
+        childrenContainer.style.marginLeft = `${this.options.distanceX}px`
 
         const chartContainer = document.createElement('div')
         chartContainer.classList.add('tree-chart-container')
 
         const chartContent = document.createElement('div')
         chartContent.classList.add('tree-chart-content', 'temp-chart-content')
-        chartContent.style.width = `${ coverNodeRight - coverNodeLeft }px`
-        chartContent.style.height = `${ coverNodeBottom - coverNodeTop }px`
+        chartContent.style.width = `${coverNodeRight - coverNodeLeft}px`
+        chartContent.style.height = `${coverNodeBottom - coverNodeTop}px`
 
         chartContainer.appendChild(chartContent)
         childrenContainer.appendChild(chartContainer)
@@ -654,7 +654,7 @@ class TreeChart {
     const collideNode = []
     leftTopCollide.forEach(item => {
       if (!rightBottomCollide.includes(item)) return
-      const node = document.querySelector(`.tree-chart-item-${ item }`)
+      const node = document.querySelector(`.tree-chart-item-${item}`)
       // 不可拖到子节点上
       if (this.dragData.element.parentElement.contains(node)) return
       collideNode.push({ node, key: item, position: this.positionData[item] })
@@ -707,12 +707,12 @@ class TreeChart {
   resize() {
     const { clientWidth, clientHeight } = this.rootNodeContainer
     const linkContainer = this.linkContainer
-    linkContainer.setAttribute('width', `${ clientWidth }px`)
-    linkContainer.setAttribute('height', `${ clientHeight }px`)
+    linkContainer.setAttribute('width', `${clientWidth}px`)
+    linkContainer.setAttribute('height', `${clientHeight}px`)
     if (this.dragData.ghostContainer) {
       const ghostContainerStyle = this.dragData.ghostContainer.style
-      ghostContainerStyle.width = `${ clientWidth }px`
-      ghostContainerStyle.height = `${ clientHeight }px`
+      ghostContainerStyle.width = `${clientWidth}px`
+      ghostContainerStyle.height = `${clientHeight}px`
     }
   }
 
@@ -740,7 +740,7 @@ class TreeChart {
       const scrollSpeed = this.options.scrollSpeed
       this.foolowScrollData.interval = setInterval(() => {
         if (direct === 'Left' || direct === 'Top') {
-          rootContainer[`scroll${ direct }`] -= scrollSpeed
+          rootContainer[`scroll${direct}`] -= scrollSpeed
         } else {
           if (direct === 'Right') {
             rootContainer.scrollLeft += scrollSpeed
