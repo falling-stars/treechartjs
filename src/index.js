@@ -1,5 +1,7 @@
 import './index.scss'
 
+const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
+
 class TreeChart {
   constructor(options) {
     this.options = Object.assign(
@@ -45,7 +47,7 @@ class TreeChart {
       const renderResult = contentRender(data)
       if (typeof renderResult === 'string') {
         node.innerHTML = `<div>${renderResult}</div>`
-      } else if (typeof renderResult === 'object' && renderResult.nodeType === 1) {
+      } else if (isElement(renderResult)) {
         node.appendChild(renderResult)
       } else {
         node.innerText = 'Please check contentRender return type is string or element'
@@ -280,8 +282,7 @@ class TreeChart {
   }
 
   getKey(data) {
-    const isNode = /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
-    return isNode ? data.getAttribute('data-key') : data[this.options.keyField]
+    return isElement(data) ? data.getAttribute('data-key') : data[this.options.keyField]
   }
 
   getParentNode(node) {
@@ -309,7 +310,7 @@ class TreeChart {
   }
 
   insertNode(target, origin, type) {
-    const targetNode = target.nodeType === 1 ? target : this.rootNodeContainer.querySelector(`.tree-chart-item-${target}`)
+    const targetNode = isElement(target) ? target : this.rootNodeContainer.querySelector(`.tree-chart-item-${target}`)
     const targetNodeContainer = targetNode.parentElement
     const targetParentNode = this.getParentNode(targetNode)
 
@@ -322,7 +323,7 @@ class TreeChart {
     if (isNewNode) {
       originNode = this.createNode(origin)
     } else {
-      originNode = origin.nodeType === 1 ? origin : this.rootNodeContainer.querySelector(`tree-chart-item-${origin}`)
+      originNode = isElement(origin) ? origin : this.rootNodeContainer.querySelector(`tree-chart-item-${origin}`)
     }
     let originNodeContainer = null
     if (isNewNode) {
