@@ -79,7 +79,20 @@ class TreeChart {
 
     if (isRoot) {
       nodeContainer.classList.add('is-node-container')
-      this.draggable && nodeContainer.classList.add('is-draggable')
+      const padding = Object.assign({
+        top: 30,
+        right: 30,
+        bottom: 30,
+        left: 30
+      }, options.padding)
+      for (const key in padding) {
+        if (padding.hasOwnProperty(key) && /left|top|right|bottom/.test(key)) {
+          let paddingValue = padding[key]
+          if (isNaN(paddingValue) || paddingValue < 0) continue
+          if (this.draggable && /top|bottom/.test(key) && paddingValue < 30) paddingValue = 30
+          nodeContainer.style[`padding${key.replace(/^./, $ => $.toUpperCase())}`] = `${paddingValue}px`
+        }
+      }
       this.rootNode = node
       this.rootNodeContainer = nodeContainer
     }
