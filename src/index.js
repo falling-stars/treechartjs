@@ -4,6 +4,7 @@ class TreeChart {
   constructor(options) {
     this.options = Object.assign(
       {
+        keyField: 'id',
         distanceX: 60,
         distanceY: 60,
         draggable: false,
@@ -33,10 +34,15 @@ class TreeChart {
     this.resize()
   }
 
+  getKeyValue(data) {
+    return data[this.options.keyField]
+  }
+
   createNode(data) {
     const node = document.createElement('div')
-    node.classList.add('tree-chart-content', `tree-chart-item-${data.id}`)
-    node.setAttribute('data-key', data.id)
+    const key = this.getKeyValue(data)
+    node.classList.add('tree-chart-content', `tree-chart-item-${key}`)
+    node.setAttribute('data-key', key)
     // 生成用户自定义模板
     const contentRender = this.options.contentRender
     if (typeof contentRender === 'function') {
@@ -105,7 +111,7 @@ class TreeChart {
       const childrenKeys = []
       for (const key in data.children) {
         if (data.children.hasOwnProperty(key)) {
-          childrenKeys.push(data.children[key].id)
+          childrenKeys.push(this.getKeyValue(data.children[key]))
           this.createNodes(data.children[key], childrenContainer)
         }
       }
@@ -141,7 +147,7 @@ class TreeChart {
     for (const item of nodeList) {
       const childrenKeys = item.getAttribute('data-children')
       const itemLayout = item.getBoundingClientRect()
-      const itemKey = this.getKey(item)
+      const itemKey = this.getNodeKey(item)
       const childrenNodeContainer = item.nextElementSibling
       // 忽略收起状态的节点
       if (childrenKeys && !childrenNodeContainer.classList.contains('is-hidden')) {
@@ -277,7 +283,7 @@ class TreeChart {
     this.createLink()
   }
 
-  getKey(node) {
+  getNodeKey(node) {
     return node.getAttribute('data-key')
   }
 
@@ -328,7 +334,7 @@ class TreeChart {
     } else {
       originNodeContainer = originNode.parentElement
     }
-    const originKey = isNewNode ? origin.id : this.getKey(originNode)
+    const originKey = isNewNode ? this.getKeyValue(origin) : this.getNodeKey(originNode)
     const originParentNode = this.getParentNode(originNode)
 
     if (type === 'child') {
@@ -425,7 +431,7 @@ class TreeChart {
       if (dragNode && dragNode !== this.rootNode) {
         dragData.element = dragNode
         dragData.ghostElement = dragNode.cloneNode(true)
-        const { left, top } = this.positionData[this.getKey(dragNode)]
+        const { left, top } = this.positionData[this.getNodeKey(dragNode)]
         dragData.eventOffsetX = e.clientX + rootContainer.scrollLeft - left
         dragData.eventOffsetY = e.clientY + rootContainer.scrollTop - top
       }
@@ -518,7 +524,7 @@ class TreeChart {
     let from = null
     let to = null
 
-    const coverNodeKey = this.getKey(coverNode)
+    const coverNodeKey = this.getNodeKey(coverNode)
     const { top: coverNodeTop, bottom: coverNodeBottom, left: coverNodeLeft, right: coverNodeRight } = this.positionData[coverNodeKey]
 
     // 如果被覆盖的是根节点的话只允许作为子节点插入
@@ -530,7 +536,7 @@ class TreeChart {
       const topPositionValue = coverNodeTop + offsetValue
       const bottomPositionValue = coverNodeBottom - offsetValue
 
-      const parentKey = this.getKey(this.getParentNode(coverNode))
+      const parentKey = this.getNodeKey(this.getParentNode(coverNode))
       const parentPosition = this.positionData[parentKey]
 
       if (ghostBottom <= topPositionValue) {
@@ -577,7 +583,7 @@ class TreeChart {
       // 有子节点的情况
       if (coverNode.nextElementSibling) {
         const childNodeList = coverNode.nextElementSibling.childNodes
-        const insertPreviousKey = this.getKey(childNodeList[childNodeList.length - 1].querySelector('.tree-chart-content'))
+        const insertPreviousKey = this.getNodeKey(childNodeList[childNodeList.length - 1].querySelector('.tree-chart-content'))
         const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData[insertPreviousKey]
         to = {
           x: childPreviousLeft,
@@ -614,7 +620,7 @@ class TreeChart {
 
   // 获取拖动过程中碰撞的元素
   getCollideNode({ left, right, top, bottom }) {
-    const draggingElementKey = this.getKey(this.dragData.element)
+    const draggingElementKey = this.getNodeKey(this.dragData.element)
     // Find current collide contentElement position
     const searchCurrent = (target, list, searchLarge) => {
       const listLen = list.length
