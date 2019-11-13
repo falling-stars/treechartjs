@@ -42,6 +42,7 @@ class TreeChart {
     const key = this.getKey(data)
     node.classList.add('tree-chart-content', `tree-chart-item-${key}`)
     node.setAttribute('data-key', key)
+    this.draggable && data.disableDrag && node.classList.add('is-disable-drag')
 
     const renderContainer = document.createElement('div')
     renderContainer.classList.add('tree-render-container')
@@ -479,14 +480,16 @@ class TreeChart {
 
     rootNodeContainer.addEventListener('mousedown', e => {
       const dragNode = this.getCurrentEventNode(e.target)
+      if (!dragNode) return
       // 根节点不允许拖动
-      if (dragNode && dragNode !== this.rootNode) {
-        dragData.element = dragNode
-        dragData.ghostElement = dragNode.cloneNode(true)
-        const { left, top } = this.positionData[this.getKey(dragNode)]
-        dragData.eventOffsetX = e.clientX + rootContainer.scrollLeft - left
-        dragData.eventOffsetY = e.clientY + rootContainer.scrollTop - top
-      }
+      if (dragNode === this.rootNode) return
+      // 用户禁止拖动的节点
+      if (dragNode.classList.contains('is-disable-drag')) return
+      dragData.element = dragNode
+      dragData.ghostElement = dragNode.cloneNode(true)
+      const { left, top } = this.positionData[this.getKey(dragNode)]
+      dragData.eventOffsetX = e.clientX + rootContainer.scrollLeft - left
+      dragData.eventOffsetY = e.clientY + rootContainer.scrollTop - top
     })
     rootNodeContainer.addEventListener('mousemove', e => {
       if (dragData.element) {
