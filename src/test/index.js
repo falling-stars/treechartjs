@@ -38,7 +38,7 @@ const data = {
     {
       id: 14,
       name: 14,
-      children: [{ name: 141, id: 141, disableDrag: true, }]
+      children: [{ name: 141, id: 141, disableDrag: true }]
     }
   ]
 }

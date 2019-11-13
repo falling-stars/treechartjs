@@ -1,6 +1,7 @@
 import './index.scss'
 
 const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
+const childrenIsFold = node => Boolean(node.querySelector('.can-unfold'))
 
 class TreeChart {
   constructor(options) {
@@ -211,12 +212,12 @@ class TreeChart {
     })
   }
 
-  toggleFold(target) {
+  toggleFold(data) {
     let unfoldElement = null
-    if (typeof target === 'string') {
-      unfoldElement = document.querySelector(`.tree-chart-item-${target} .tree-chart-unfold`)
-    } else {
-      unfoldElement = target
+    if (typeof data === 'string') {
+      unfoldElement = this.rootNodeContainer.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
+    } else if (isElement(data)) {
+      unfoldElement = data
     }
     if (unfoldElement) {
       const childNodeContainer = unfoldElement.parentElement.nextElementSibling
@@ -519,7 +520,12 @@ class TreeChart {
         if (targetNode.classList.contains('become-child')) type = 'child'
         this.cancelDrag()
         this.insertNode(targetNode, dragNode, type)
-        typeof options.ondragend === 'function' && options.ondragend(
+        // 如果目标节点是折叠状态，插入子节点后自动展开
+        if (type === 'child' && childrenIsFold(targetNode)) {
+          this.toggleFold(this.getKey(targetNode))
+        }
+        const dragendHook = options.ondragend
+        typeof dragendHook === 'function' && dragendHook(
           { key: this.getKey(targetNode), element: targetNode },
           { key: this.getKey(dragNode), element: dragNode },
           type)
@@ -614,8 +620,6 @@ class TreeChart {
 
       // 拖到父节点时只能作为兄弟节点插入
       if (insertType === 'child' && coverNode === this.getParentNode(dragElement)) insertType = 'next'
-      // 拖到收起状态的节点只能作为兄弟插入
-      if (insertType === 'child' && coverNode.querySelector('.can-unfold')) insertType = 'next'
       // 禁止插入到下一个兄弟节点的上面
       if (insertType === 'previous' && this.getNextSiblingNode(dragElement) === coverNode) insertType = 'child'
       // 禁止插入到上一个兄弟节点的下面
@@ -636,6 +640,31 @@ class TreeChart {
     }
     coverNode.classList.add(`become-${insertType}`, 'collide-node')
 
+    const createTempChildNode = () => {
+      const childrenContainer = document.createElement('div')
+      childrenContainer.classList.add('tree-chart-children-container', 'temp-children-container')
+      childrenContainer.style.marginLeft = `${this.options.distanceX}px`
+
+      const chartContainer = document.createElement('div')
+      chartContainer.classList.add('tree-chart-container')
+
+      const chartContent = document.createElement('div')
+      chartContent.classList.add('tree-chart-content', 'temp-chart-content')
+      chartContent.style.width = `${coverNodeRight - coverNodeLeft}px`
+      chartContent.style.height = `${coverNodeBottom - coverNodeTop}px`
+
+      chartContainer.appendChild(chartContent)
+      childrenContainer.appendChild(chartContainer)
+      coverNode.parentElement.appendChild(childrenContainer)
+
+      to = {
+        x: coverNodeRight + this.options.distanceX,
+        y: (coverNodeTop + coverNodeBottom) / 2,
+        key: 'to'
+      }
+      this.resize()
+    }
+
     if (insertType === 'child') {
       from = {
         x: coverNodeRight,
@@ -644,37 +673,22 @@ class TreeChart {
       }
       // 有子节点的情况
       if (coverNode.nextElementSibling) {
-        const childNodeList = coverNode.nextElementSibling.childNodes
-        const insertPreviousKey = this.getKey(childNodeList[childNodeList.length - 1].querySelector('.tree-chart-content'))
-        const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData[insertPreviousKey]
-        to = {
-          x: childPreviousLeft,
-          y: childPreviousBottom + 20,
-          key: 'to'
+        // 拖到收起状态的节点需要创建临时节点
+        if (childrenIsFold(coverNode)) {
+          createTempChildNode()
+        } else {
+          const childNodeList = coverNode.nextElementSibling.childNodes
+          const insertPreviousKey = this.getKey(childNodeList[childNodeList.length - 1].querySelector('.tree-chart-content'))
+          const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData[insertPreviousKey]
+          to = {
+            x: childPreviousLeft,
+            y: childPreviousBottom + 20,
+            key: 'to'
+          }
         }
       } else {
         // 没有子节点的情况创建一个临时节点
-        const childrenContainer = document.createElement('div')
-        childrenContainer.classList.add('tree-chart-children-container', 'temp-children-container')
-        childrenContainer.style.marginLeft = `${this.options.distanceX}px`
-
-        const chartContainer = document.createElement('div')
-        chartContainer.classList.add('tree-chart-container')
-
-        const chartContent = document.createElement('div')
-        chartContent.classList.add('tree-chart-content', 'temp-chart-content')
-        chartContent.style.width = `${coverNodeRight - coverNodeLeft}px`
-        chartContent.style.height = `${coverNodeBottom - coverNodeTop}px`
-
-        chartContainer.appendChild(chartContent)
-        childrenContainer.appendChild(chartContainer)
-        coverNode.parentElement.appendChild(childrenContainer)
-        to = {
-          x: coverNodeRight + this.options.distanceX,
-          y: (coverNodeTop + coverNodeBottom) / 2,
-          key: 'to'
-        }
-        this.resize()
+        createTempChildNode()
       }
     }
     this.drawLine(from, to)
