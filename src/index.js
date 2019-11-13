@@ -437,8 +437,8 @@ class TreeChart {
     if (typeof mouseenterHook === 'function' || typeof mouseleaveHook === 'function') {
       rootNodeContainer.querySelectorAll('.tree-render-container').forEach(node => {
         const argumentData = { key: this.getKey(node), element: node }
-        mouseenterHook && node.addEventListener('mouseenter', e => mouseenterHook(argumentData, e))
-        mouseenterHook && node.addEventListener('mouseleave', e => mouseleaveHook(argumentData, e))
+        typeof mouseenterHook === 'function' && node.addEventListener('mouseenter', e => mouseenterHook(argumentData, e))
+        typeof mouseleaveHook === 'function' && node.addEventListener('mouseleave', e => mouseleaveHook(argumentData, e))
       })
     }
   }
