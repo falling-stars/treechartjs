@@ -57,6 +57,12 @@ new TreeChart({
   onclick() {
     console.log('click')
   },
+  mouseenter() {
+    console.log('enter')
+  },
+  mouseleave() {
+    console.log('leave')
+  },
   contentRender(data) {
     const container = document.createElement('div')
     container.style.width = '290px'
