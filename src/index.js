@@ -485,6 +485,8 @@ class TreeChart {
     })
     rootNodeContainer.addEventListener('mousemove', e => {
       if (dragData.element) {
+        // 处理Chrome76版本长按不移动也会触发的情况
+        if (e.movementX === 0 && e.movementY === 0) return
         // 清除文字选择对拖动的影响
         getSelection ? getSelection().removeAllRanges() : document.selection.empty()
         rootNodeContainer.classList.add('cursor-move')
