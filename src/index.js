@@ -393,6 +393,7 @@ class TreeChart {
       }
     }
 
+    isNewNode && this.setNodeHook(originNode)
     this.reloadLink()
   }
 
@@ -420,9 +421,6 @@ class TreeChart {
     const rootNodeContainer = this.rootNodeContainer
 
     const clickHook = options.onclick
-    const mouseenterHook = options.mouseenter
-    const mouseleaveHook = options.mouseleave
-
     if (typeof clickHook === 'function') {
       let oldNode = null
       rootNodeContainer.addEventListener('mousedown', e => oldNode = this.getCurrentEventNode(e.target))
@@ -433,21 +431,28 @@ class TreeChart {
       })
     }
 
-    if (typeof mouseenterHook === 'function' || typeof mouseleaveHook === 'function') {
+    if (typeof options.mouseenter === 'function' || typeof options.mouseleave === 'function') {
       rootNodeContainer.querySelectorAll('.tree-render-container').forEach(node => {
-        const argumentData = { key: this.getKey(node), element: node }
-        typeof mouseenterHook === 'function' && node.addEventListener('mouseenter', e => {
-          // 忽略拖动被覆盖的情况
-          if (this.isDragging()) return
-          mouseenterHook(argumentData, e)
-        })
-        typeof mouseleaveHook === 'function' && node.addEventListener('mouseleave', e => {
-          // 忽略拖动被覆盖的情况
-          if (this.isDragging()) return
-          mouseleaveHook(argumentData, e)
-        })
+        this.setNodeHook(node)
       })
     }
+  }
+
+  setNodeHook(node) {
+    const options = this.options
+    const mouseenterHook = options.mouseenter
+    const mouseleaveHook = options.mouseleave
+    const argumentData = { key: this.getKey(node), element: node }
+    typeof mouseenterHook === 'function' && node.addEventListener('mouseenter', e => {
+      // 忽略拖动被覆盖的情况
+      if (this.isDragging()) return
+      mouseenterHook(argumentData, e)
+    })
+    typeof mouseleaveHook === 'function' && node.addEventListener('mouseleave', e => {
+      // 忽略拖动被覆盖的情况
+      if (this.isDragging()) return
+      mouseleaveHook(argumentData, e)
+    })
   }
 
   // 绑定拖动事件
