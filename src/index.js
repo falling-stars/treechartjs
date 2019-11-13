@@ -408,6 +408,13 @@ class TreeChart {
     return null
   }
 
+  // 判断是否处于拖动过程
+  isDragging() {
+    if (!this.draggable) return false
+    const { ghostTranslateX, ghostTranslateY, element } = this.dragData
+    return element && (ghostTranslateX !== 0 || ghostTranslateY !== 0)
+  }
+
   setEventHook() {
     const options = this.options
     const rootNodeContainer = this.rootNodeContainer
@@ -422,23 +429,23 @@ class TreeChart {
       rootNodeContainer.addEventListener('mouseup', e => {
         const node = this.getCurrentEventNode(e.target)
         if (!node) return
-        // 判断是否有拖拽的行为
-        let notDrag = true
-        if (this.draggable) {
-          const { ghostTranslateX, ghostTranslateY } = this.dragData
-          if (ghostTranslateX !== 0 || ghostTranslateY !== 0) {
-            notDrag = false
-          }
-        }
-        node === oldNode && notDrag && clickHook({ key: this.getKey(node), element: node }, e)
+        node === oldNode && !this.isDragging() && clickHook({ key: this.getKey(node), element: node }, e)
       })
     }
 
     if (typeof mouseenterHook === 'function' || typeof mouseleaveHook === 'function') {
       rootNodeContainer.querySelectorAll('.tree-render-container').forEach(node => {
         const argumentData = { key: this.getKey(node), element: node }
-        typeof mouseenterHook === 'function' && node.addEventListener('mouseenter', e => mouseenterHook(argumentData, e))
-        typeof mouseleaveHook === 'function' && node.addEventListener('mouseleave', e => mouseleaveHook(argumentData, e))
+        typeof mouseenterHook === 'function' && node.addEventListener('mouseenter', e => {
+          // 忽略拖动被覆盖的情况
+          if (this.isDragging()) return
+          mouseenterHook(argumentData, e)
+        })
+        typeof mouseleaveHook === 'function' && node.addEventListener('mouseleave', e => {
+          // 忽略拖动被覆盖的情况
+          if (this.isDragging()) return
+          mouseleaveHook(argumentData, e)
+        })
       })
     }
   }
