@@ -51,7 +51,7 @@ class TreeChart {
     if (typeof contentRender === 'function') {
       const renderResult = contentRender(data)
       if (typeof renderResult === 'string') {
-        renderContainer.innerHTML = renderResult
+        renderContainer.innerHTML = renderResult.replace(/>\s+</g, '><')
       } else if (isElement(renderResult)) {
         renderContainer.appendChild(renderResult)
       } else {
