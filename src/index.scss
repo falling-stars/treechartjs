@@ -32,54 +32,44 @@
     position: relative;
     display: inline-block;
     vertical-align: middle;
-    &.become-child {
-      box-shadow: 0 0 2px 2px #ff9a36;
-      & + .tree-chart-children-container {
-        & > .tree-chart-container:last-child {
-          & > .tree-chart-content {
-            position: relative;
-            &:after {
-              position: absolute;
-              left: 0;
-              bottom: -30px;
-              content: '';
-              display: block;
-              width: 100%;
-              height: 20px;
-              border-radius: 1px;
-              background-color: #ffc46b;
-            }
-            &.temp-chart-content {
-              &:after {
-                bottom: calc(50% - 10px);
-              }
-            }
-          }
-        }
-      }
+  }
+  .become-previous {
+    box-shadow: 0 0 2px 2px #ff9a36;
+    &:after {
+      position: absolute;
+      left: 0;
+      top: -30px;
+      content: '';
+      display: block;
+      width: 100%;
+      height: 20px;
+      border-radius: 1px;
+      background-color: #ffc46b;
     }
-    &.become-previous {
-      position: relative;
-      box-shadow: 0 0 2px 2px #ff9a36;
+  }
+  .become-next {
+    box-shadow: 0 0 2px 2px #ff9a36;
+    &:after {
+      position: absolute;
+      left: 0;
+      bottom: -30px;
+      content: '';
+      display: block;
+      width: 100%;
+      height: 20px;
+      border-radius: 1px;
+      background-color: #ffc46b;
+    }
+  }
+  .become-child {
+    box-shadow: 0 0 2px 2px #ff9a36;
+  }
+  .temp-children-container {
+    .tree-chart-content {
       &:after {
         position: absolute;
         left: 0;
-        top: -30px;
-        content: '';
-        display: block;
-        width: 100%;
-        height: 20px;
-        border-radius: 1px;
-        background-color: #ffc46b;
-      }
-    }
-    &.become-next {
-      position: relative;
-      box-shadow: 0 0 2px 2px #ff9a36;
-      &:after {
-        position: absolute;
-        left: 0;
-        bottom: -30px;
+        bottom: calc(50% - 10px);
         content: '';
         display: block;
         width: 100%;
