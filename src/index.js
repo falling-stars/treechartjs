@@ -43,7 +43,13 @@ class TreeChart {
     const key = this.getKey(data)
     node.classList.add('tree-chart-content', `tree-chart-item-${key}`)
     node.setAttribute('data-key', key)
-    this.draggable && data.disableDrag && node.classList.add('is-disable-drag')
+    // 设置禁止拖拽的节点
+    const allowDrag = this.options.allowDrag
+    if (this.draggable && typeof allowDrag === 'function') {
+      if (!allowDrag(data)) {
+        node.classList.add('not-allow-drag')
+      }
+    }
 
     const renderContainer = document.createElement('div')
     renderContainer.classList.add('tree-render-container')
@@ -485,7 +491,7 @@ class TreeChart {
       // 根节点不允许拖动
       if (dragNode === this.rootNode) return
       // 用户禁止拖动的节点
-      if (dragNode.classList.contains('is-disable-drag')) return
+      if (dragNode.classList.contains('not-allow-drag')) return
       dragData.element = dragNode
       dragData.ghostElement = dragNode.cloneNode(true)
       const { left, top } = this.positionData[this.getKey(dragNode)]

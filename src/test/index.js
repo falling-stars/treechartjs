@@ -38,7 +38,7 @@ const data = {
     {
       id: 14,
       name: 14,
-      children: [{ name: 141, id: 141, disableDrag: true }]
+      children: [{ name: 141, id: 141 }]
     }
   ]
 }
@@ -51,6 +51,9 @@ new TreeChart({
   smooth: 60,
   scrollTriggerDistance: 30,
   unfold: true,
+  allowDrag(data) {
+    return data.id !== 14
+  },
   ondragend() {
     console.log('dragend')
   },
