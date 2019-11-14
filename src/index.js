@@ -310,24 +310,66 @@ class TreeChart {
     return isElement(data) ? data.getAttribute('data-key') : data[this.options.keyField]
   }
 
-  getParentNode(node) {
+  getParentKey(key) {
+    const node = this.getNode(key)
+    if (node) {
+      const parentNode = this.getParentNode(node)
+      if (parentNode) {
+        return this.getKey(parentNode)
+      } else {
+        return null
+      }
+    }
+    return null
+  }
+
+  getPreviousKey(key) {
+    const node = this.getNode(key)
+    if (node) {
+      const previousNode = this.getPreviousSiblingNode(node)
+      if (previousNode) {
+        return this.getKey(previousNode)
+      } else {
+        return null
+      }
+    }
+    return null
+  }
+
+  getNextKey(key) {
+    const node = this.getNode(key)
+    if (node) {
+      const nextNode = this.getNextSiblingNode(node)
+      if (nextNode) {
+        return this.getKey(nextNode)
+      } else {
+        return null
+      }
+    }
+    return null
+  }
+
+  getParentNode(target) {
     try {
+      const node = isElement(target) ? target : this.getNode(target)
       return node.parentElement.parentElement.previousElementSibling
     } catch (e) {
       return null
     }
   }
 
-  getPreviousSiblingNode(node) {
+  getPreviousSiblingNode(target) {
     try {
+      const node = isElement(target) ? target : this.getNode(target)
       return node.parentElement.previousElementSibling.querySelector('.tree-chart-content')
     } catch (e) {
       return null
     }
   }
 
-  getNextSiblingNode(node) {
+  getNextSiblingNode(target) {
     try {
+      const node = isElement(target) ? target : this.getNode(target)
       return node.parentElement.nextElementSibling.querySelector('.tree-chart-content')
     } catch (e) {
       return null
