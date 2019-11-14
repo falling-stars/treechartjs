@@ -43,11 +43,18 @@ class TreeChart {
     const key = this.getKey(data)
     node.classList.add('tree-chart-content', `tree-chart-item-${key}`)
     node.setAttribute('data-key', key)
-    // 设置禁止拖拽的节点
-    const allowDrag = this.options.allowDrag
-    if (this.draggable && typeof allowDrag === 'function') {
-      if (!allowDrag(data)) {
+
+    if (this.draggable) {
+      const options = this.options
+      // 设置禁止拖拽的节点
+      const allowDrag = options.allowDrag
+      if (typeof allowDrag === 'function' && !allowDrag(data)) {
         node.classList.add('not-allow-drag')
+      }
+      // 设置禁止添加子节点
+      const allowInsertChild = options.allowInsertChild
+      if (typeof allowInsertChild === 'function' && !allowInsertChild(data)) {
+        node.classList.add('not-allow-insert-child')
       }
     }
 
@@ -626,6 +633,8 @@ class TreeChart {
 
       // 拖到父节点时只能作为兄弟节点插入
       if (insertType === 'child' && coverNode === this.getParentNode(dragElement)) insertType = 'next'
+      // 禁止插入子节点的情况作为兄弟节点插入
+      if (insertType === 'child' && coverNode.classList.contains('not-allow-insert-child')) insertType = 'next'
       // 禁止插入到下一个兄弟节点的上面
       if (insertType === 'previous' && this.getNextSiblingNode(dragElement) === coverNode) insertType = 'child'
       // 禁止插入到上一个兄弟节点的下面

@@ -54,6 +54,9 @@ new TreeChart({
   allowDrag(data) {
     return data.id !== 14
   },
+  allowInsertChild(data) {
+    return data.id !== 14
+  },
   ondragend() {
     console.log('dragend')
   },
