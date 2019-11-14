@@ -176,7 +176,7 @@ class TreeChart {
           key: itemKey
         }
         childrenKeys.split(',').forEach(childKey => {
-          const childrenElement = rootNodeContainer.querySelector(`.tree-chart-item-${childKey}`)
+          const childrenElement = this.getNode(childKey)
           const childrenLayout = childrenElement.getBoundingClientRect()
           const to = {
             x: childrenLayout.left - offsetLeftValue + scrollLeft,
@@ -302,6 +302,10 @@ class TreeChart {
     this.createLink()
   }
 
+  getNode(key) {
+    return this.rootNodeContainer.querySelector(`.tree-chart-item-${key}`)
+  }
+
   getKey(data) {
     return isElement(data) ? data.getAttribute('data-key') : data[this.options.keyField]
   }
@@ -331,7 +335,7 @@ class TreeChart {
   }
 
   insertNode(target, origin, type) {
-    const targetNode = isElement(target) ? target : this.rootNodeContainer.querySelector(`.tree-chart-item-${target}`)
+    const targetNode = isElement(target) ? target : this.getNode(target)
     const targetNodeContainer = targetNode.parentElement
     const targetParentNode = this.getParentNode(targetNode)
 
@@ -344,7 +348,7 @@ class TreeChart {
     if (isNewNode) {
       originNode = this.createNode(origin)
     } else {
-      originNode = isElement(origin) ? origin : this.rootNodeContainer.querySelector(`tree-chart-item-${origin}`)
+      originNode = isElement(origin) ? origin : this.getNode(origin)
     }
     let originNodeContainer = null
     if (isNewNode) {
@@ -774,7 +778,7 @@ class TreeChart {
     const collideNode = []
     leftTopCollide.forEach(item => {
       if (!rightBottomCollide.includes(item)) return
-      const node = document.querySelector(`.tree-chart-item-${item}`)
+      const node = this.getNode(item)
       // 不可拖到子节点上
       if (this.dragData.element.parentElement.contains(node)) return
       collideNode.push({ node, key: item, position: this.positionData[item] })
