@@ -42,7 +42,7 @@ const data = {
     }
   ]
 }
-new TreeChart({
+const chart = new TreeChart({
   data,
   container: document.querySelector('#demo'),
   distanceX: 100,
@@ -78,3 +78,7 @@ new TreeChart({
     return container
   }
 })
+
+setTimeout(() => {
+  chart.reRenderNode('122', { name: 99999, id: 9999 })
+}, 1000)

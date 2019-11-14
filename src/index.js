@@ -298,44 +298,53 @@ class TreeChart {
   }
 
   reRenderNode(key, data) {
-    // 替换节点
     const node = this.getNode(key)
     const parentElement = node.parentElement
-    const newNode = this.createNode(data)
     const childrenKeys = node.getAttribute('data-children')
-    childrenKeys && newNode.setAttribute('data-children', childrenKeys)
-    parentElement.insertBefore(newNode, node)
-    parentElement.removeChild(node)
     const newKey = this.getKey(data)
-    if (newKey === key) return
-    // 替换连线的类名
-    const parentKey = this.getParentKey(key)
-    const parentLineClassName = `line-${parentKey}-${key}`
-    const parentLink = this.linkContainer.querySelector(`.${parentLineClassName}`)
-    parentLink.classList.add(`line-${parentKey}-${newKey}`)
-    parentLink.classList.remove(parentLineClassName)
-    if (childrenKeys) {
-      childrenKeys.split(',').forEach(childKey => {
-        const childLineClassName = `line-${key}-${childKey}`
-        const childLink = this.linkContainer.querySelector(`.${childLineClassName}`)
-        childLink.classList.add(`line-${newKey}-${childKey}`)
-        childLink.classList.remove(childLineClassName)
+
+    if (newKey !== key) {
+      // 替换父节点的children-key
+      const parentNode = this.getParentNode(node)
+      const parentChildrenKey = parentNode.getAttribute('data-children')
+      const regExp = new RegExp(key)
+      parentNode.setAttribute('data-children', parentChildrenKey.replace(regExp, newKey))
+      // 替换连线的类名
+      const parentKey = this.getParentKey(key)
+      const parentLineClassName = `line-${parentKey}-${key}`
+      const parentLink = this.linkContainer.querySelector(`.${parentLineClassName}`)
+      parentLink.classList.add(`line-${parentKey}-${newKey}`)
+      parentLink.classList.remove(parentLineClassName)
+      if (childrenKeys) {
+        childrenKeys.split(',').forEach(childKey => {
+          const childLineClassName = `line-${key}-${childKey}`
+          const childLink = this.linkContainer.querySelector(`.${childLineClassName}`)
+          childLink.classList.add(`line-${newKey}-${childKey}`)
+          childLink.classList.remove(childLineClassName)
+        })
+      }
+      // 替换position数据
+      const positionData = this.positionData
+      positionData[newKey] = positionData[key]
+      positionData[newKey].key = newKey
+      delete positionData[key]
+      const fieldNames = ['left', 'top', 'right', 'bottom']
+      fieldNames.forEach(fieldName => {
+        const redirectData = positionData[fieldName]
+        for (const redirectKey in redirectData) {
+          const redirectItem = redirectData[redirectKey]
+          const oldKeyIndex = redirectItem.indexOf(key)
+          oldKeyIndex > -1 && redirectItem.splice(oldKeyIndex, 1, newKey)
+        }
       })
     }
-    // 替换position数据
-    const positionData = this.positionData
-    positionData[newKey] = positionData[key]
-    positionData[newKey].key = newKey
-    delete positionData[key]
-    const fieldNames = ['left', 'top', 'right', 'bottom']
-    fieldNames.forEach(fieldName => {
-      const redirectData = positionData[fieldName]
-      for (const redirectKey in redirectData) {
-        const redirectItem = redirectData[redirectKey]
-        const oldKeyIndex = redirectItem.indexOf(key)
-        oldKeyIndex > -1 && redirectItem.splice(oldKeyIndex, 1, newKey)
-      }
-    })
+
+    // 替换节点
+    const newNode = this.createNode(data)
+    childrenKeys && newNode.setAttribute('data-children', childrenKeys)
+    node.querySelector('.tree-chart-unfold') && this.addUnfoldElement(newNode)
+    parentElement.insertBefore(newNode, node)
+    parentElement.removeChild(node)
   }
 
   reloadLink() {
