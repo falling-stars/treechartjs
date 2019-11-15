@@ -298,26 +298,27 @@ class TreeChart {
   }
 
   reRenderNode(key, data) {
-    const node = this.getNode(key)
+    const oldKey = key.toString()
+    const newKey = this.getKey(data)
+    const node = this.getNode(oldKey)
     const parentElement = node.parentElement
     const childrenKeys = node.getAttribute('data-children')
-    const newKey = this.getKey(data)
 
-    if (newKey !== key) {
+    if (newKey !== oldKey) {
       // 替换父节点的children-key
       const parentNode = this.getParentNode(node)
       const parentChildrenKey = parentNode.getAttribute('data-children')
-      const regExp = new RegExp(key)
+      const regExp = new RegExp(oldKey)
       parentNode.setAttribute('data-children', parentChildrenKey.replace(regExp, newKey))
       // 替换连线的类名
-      const parentKey = this.getParentKey(key)
-      const parentLineClassName = `line-${parentKey}-${key}`
+      const parentKey = this.getParentKey(oldKey)
+      const parentLineClassName = `line-${parentKey}-${oldKey}`
       const parentLink = this.linkContainer.querySelector(`.${parentLineClassName}`)
       parentLink.classList.add(`line-${parentKey}-${newKey}`)
       parentLink.classList.remove(parentLineClassName)
       if (childrenKeys) {
         childrenKeys.split(',').forEach(childKey => {
-          const childLineClassName = `line-${key}-${childKey}`
+          const childLineClassName = `line-${oldKey}-${childKey}`
           const childLink = this.linkContainer.querySelector(`.${childLineClassName}`)
           childLink.classList.add(`line-${newKey}-${childKey}`)
           childLink.classList.remove(childLineClassName)
@@ -325,15 +326,15 @@ class TreeChart {
       }
       // 替换position数据
       const positionData = this.positionData
-      positionData[newKey] = positionData[key]
+      positionData[newKey] = positionData[oldKey]
       positionData[newKey].key = newKey
-      delete positionData[key]
+      delete positionData[oldKey]
       const fieldNames = ['left', 'top', 'right', 'bottom']
       fieldNames.forEach(fieldName => {
         const redirectData = positionData[fieldName]
         for (const redirectKey in redirectData) {
           const redirectItem = redirectData[redirectKey]
-          const oldKeyIndex = redirectItem.indexOf(key)
+          const oldKeyIndex = redirectItem.indexOf(oldKey)
           oldKeyIndex > -1 && redirectItem.splice(oldKeyIndex, 1, newKey)
         }
       })
