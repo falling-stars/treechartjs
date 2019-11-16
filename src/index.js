@@ -44,20 +44,6 @@ class TreeChart {
     node.classList.add('tree-chart-content', `tree-chart-item-${key}`)
     node.setAttribute('data-key', key)
 
-    if (this.draggable) {
-      const options = this.options
-      // 设置禁止拖拽的节点
-      const allowDrag = options.allowDrag
-      if (typeof allowDrag === 'function' && !allowDrag(data)) {
-        node.classList.add('not-allow-drag')
-      }
-      // 设置禁止添加子节点
-      const allowInsertChild = options.allowInsertChild
-      if (typeof allowInsertChild === 'function' && !allowInsertChild(data)) {
-        node.classList.add('not-allow-insert-child')
-      }
-    }
-
     const renderContainer = document.createElement('div')
     renderContainer.classList.add('tree-render-container')
 
@@ -76,6 +62,25 @@ class TreeChart {
       renderContainer.innerText = 'Please set contentRender function'
     }
     node.appendChild(renderContainer)
+
+    // 拖拽控制
+    if (this.draggable) {
+      const options = this.options
+      const dragControl = options.dragControl
+      if (typeof dragControl === 'function') {
+        const controlConfig = Object.assign({
+          drag: true,
+          insertChild: true,
+          insertPrevious: true,
+          insertNext: true
+        }, dragControl(data))
+        !controlConfig.drag && node.classList.add('not-allow-drag')
+        !controlConfig.insertChild && node.classList.add('not-allow-insert-child')
+        !controlConfig.insertPrevious && node.classList.add('not-allow-insert-previous')
+        !controlConfig.insertNext && node.classList.add('not-allow-insert-next')
+      }
+    }
+
     return node
   }
 
@@ -705,17 +710,37 @@ class TreeChart {
     const coverNodeKey = this.getKey(coverNode)
     const { top: coverNodeTop, bottom: coverNodeBottom, left: coverNodeLeft, right: coverNodeRight } = this.positionData[coverNodeKey]
 
+    // 拖到父节点时只能作为兄弟节点插入
+    const coverIsParent = coverNode === this.getParentNode(dragElement)
+    // 禁止插入到下一个兄弟节点的上面
+    const coverIsNext = coverNode === this.getNextSiblingNode(dragElement)
+    // 禁止插入到上一个兄弟节点的下面
+    const coverIsPrevious = coverNode === this.getPreviousSiblingNode(dragElement)
+
+    const allowConfig = {
+      child: !coverNode.classList.contains('not-allow-insert-child') && !coverIsParent,
+      next: !coverNode.classList.contains('not-allow-insert-next') && !coverIsPrevious,
+      previous: !coverNode.classList.contains('not-allow-insert-previous') && !coverIsNext
+    }
+
+    let existAllow = false
+    for (const key in allowConfig) {
+      if (allowConfig[key]) {
+        existAllow = true
+        break
+      }
+    }
+    if (!existAllow) return
+
     // 如果被覆盖的是根节点的话只允许作为子节点插入
     if (coverNode === this.rootNode) {
+      if (!allowConfig.child) return
       insertType = 'child'
     } else {
       // 位置偏上或者偏下(45%)则认为是添加兄弟节点
       const offsetValue = (coverNodeBottom - coverNodeTop) * 0.45
       const topPositionValue = coverNodeTop + offsetValue
       const bottomPositionValue = coverNodeBottom - offsetValue
-
-      const parentKey = this.getKey(this.getParentNode(coverNode))
-      const parentPosition = this.positionData[parentKey]
 
       if (ghostBottom <= topPositionValue) {
         // 在上方插入
@@ -728,56 +753,59 @@ class TreeChart {
         insertType = 'child'
       }
 
-      // 拖到父节点时只能作为兄弟节点插入
-      if (insertType === 'child' && coverNode === this.getParentNode(dragElement)) insertType = 'next'
-      // 禁止插入子节点的情况作为兄弟节点插入
-      if (insertType === 'child' && coverNode.classList.contains('not-allow-insert-child')) insertType = 'next'
-      // 禁止插入到下一个兄弟节点的上面
-      if (insertType === 'previous' && this.getNextSiblingNode(dragElement) === coverNode) insertType = 'child'
-      // 禁止插入到上一个兄弟节点的下面
-      if (insertType === 'next' && this.getPreviousSiblingNode(dragElement) === coverNode) insertType = 'child'
-
-      if (insertType === 'previous' || insertType === 'next') {
-        from = {
-          x: parentPosition.right,
-          y: (parentPosition.top + parentPosition.bottom) / 2,
-          key: 'from'
-        }
-        to = {
-          x: coverNodeLeft,
-          y: insertType === 'previous' ? coverNodeTop - 20 : coverNodeBottom + 20,
-          key: 'to'
+      // 不满足自定义控制条件的按照child=>next=>previous的权重取一个
+      if (!allowConfig[insertType]) {
+        insertType = ''
+        for (const key in allowConfig) {
+          if (allowConfig[key]) {
+            insertType = key
+            break
+          }
         }
       }
+
+      if (insertType === '') return
     }
     coverNode.classList.add(`become-${insertType}`, 'collide-node')
 
-    const createTempChildNode = () => {
-      const childrenContainer = document.createElement('div')
-      childrenContainer.classList.add('tree-chart-children-container', 'temp-children-container')
-      childrenContainer.style.marginLeft = `${this.options.distanceX}px`
-
-      const chartContainer = document.createElement('div')
-      chartContainer.classList.add('tree-chart-container')
-
-      const chartContent = document.createElement('div')
-      chartContent.classList.add('tree-chart-content', 'temp-chart-content')
-      chartContent.style.width = `${coverNodeRight - coverNodeLeft}px`
-      chartContent.style.height = `${coverNodeBottom - coverNodeTop}px`
-
-      chartContainer.appendChild(chartContent)
-      childrenContainer.appendChild(chartContainer)
-      coverNode.parentElement.appendChild(childrenContainer)
-
+    if (insertType === 'previous' || insertType === 'next') {
+      const parentKey = this.getKey(this.getParentNode(coverNode))
+      const parentPosition = this.positionData[parentKey]
+      from = {
+        x: parentPosition.right,
+        y: (parentPosition.top + parentPosition.bottom) / 2,
+        key: 'from'
+      }
       to = {
-        x: coverNodeRight + this.options.distanceX,
-        y: (coverNodeTop + coverNodeBottom) / 2,
+        x: coverNodeLeft,
+        y: insertType === 'previous' ? coverNodeTop - 20 : coverNodeBottom + 20,
         key: 'to'
       }
-      this.resize()
-    }
+    } else {
+      const createTempChildNode = () => {
+        const childrenContainer = document.createElement('div')
+        childrenContainer.classList.add('tree-chart-children-container', 'temp-children-container')
+        childrenContainer.style.marginLeft = `${this.options.distanceX}px`
 
-    if (insertType === 'child') {
+        const chartContainer = document.createElement('div')
+        chartContainer.classList.add('tree-chart-container')
+
+        const chartContent = document.createElement('div')
+        chartContent.classList.add('tree-chart-content', 'temp-chart-content')
+        chartContent.style.width = `${coverNodeRight - coverNodeLeft}px`
+        chartContent.style.height = `${coverNodeBottom - coverNodeTop}px`
+
+        chartContainer.appendChild(chartContent)
+        childrenContainer.appendChild(chartContainer)
+        coverNode.parentElement.appendChild(childrenContainer)
+
+        to = {
+          x: coverNodeRight + this.options.distanceX,
+          y: (coverNodeTop + coverNodeBottom) / 2,
+          key: 'to'
+        }
+        this.resize()
+      }
       from = {
         x: coverNodeRight,
         y: (coverNodeTop + coverNodeBottom) / 2,
@@ -803,6 +831,7 @@ class TreeChart {
         createTempChildNode()
       }
     }
+
     this.drawLine(from, to)
   }
 

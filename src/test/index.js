@@ -51,11 +51,16 @@ const chart = new TreeChart({
   smooth: 60,
   scrollTriggerDistance: 30,
   unfold: true,
-  allowDrag(data) {
-    return data.id !== 14
+  padding: {
+    top: 50
   },
-  allowInsertChild(data) {
-    return data.id !== 14
+  dragControl(data) {
+    return {
+      drag: data.id !== 131,
+      insertChild: data.id !== 131,
+      insertPrevious: data.id !== 131,
+      insertNext: true
+    }
   },
   ondragend() {
     console.log('dragend')
