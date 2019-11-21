@@ -211,7 +211,7 @@ class TreeChart {
       link = document.querySelector(`.${lineClassName}`)
     } else {
       link = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-      link.classList.add(lineClassName)
+      link.classList.add(lineClassName, `line-form-${from.key}`)
       this.linkContainer.appendChild(link)
     }
     const centerX = (to.x - from.x) / 2
@@ -537,11 +537,16 @@ class TreeChart {
     const options = this.options
     const rootNodeContainer = this.rootNodeContainer
 
+    // 用mouseEvent来实现click主要是为了区别dragstart和click的行为
     const clickHook = options.onclick
     if (typeof clickHook === 'function') {
       let oldNode = null
-      rootNodeContainer.addEventListener('mousedown', e => oldNode = this.getCurrentEventNode(e.target))
+      rootNodeContainer.addEventListener('mousedown', e => {
+        if (e.button !== 0) return
+        oldNode = this.getCurrentEventNode(e.target)
+      })
       rootNodeContainer.addEventListener('mouseup', e => {
+        if (e.button !== 0) return
         const node = this.getCurrentEventNode(e.target)
         if (!node) return
         node === oldNode && !this.isDragging() && clickHook({ key: this.getKey(node), element: node }, e)
@@ -594,7 +599,11 @@ class TreeChart {
       eventOffsetY: 0
     }
 
+    let dragstartLock = false
+    const dragstartHook = typeof options.ondragstart === 'function' && options.ondragstart
+
     rootNodeContainer.addEventListener('mousedown', e => {
+      if (e.button !== 0) return
       const dragNode = this.getCurrentEventNode(e.target)
       if (!dragNode) return
       // 根节点不允许拖动
@@ -608,6 +617,7 @@ class TreeChart {
       dragData.eventOffsetY = e.clientY + rootContainer.scrollTop - top
     })
     rootNodeContainer.addEventListener('mousemove', e => {
+      if (e.button !== 0) return
       if (dragData.element) {
         // 处理Chrome76版本长按不移动也会触发的情况
         if (e.movementX === 0 && e.movementY === 0) return
@@ -623,9 +633,15 @@ class TreeChart {
         this.setDragEffect(ghostPosition)
         // 跟随滚动
         this.followScroll(ghostPosition)
+        if (!dragstartLock && dragstartHook) {
+          dragstartLock = true
+          dragstartHook({ key: this.getKey(dragData.element), element: dragData.element.childNodes[0] })
+        }
       }
     })
-    rootNodeContainer.addEventListener('mouseup', () => {
+    rootNodeContainer.addEventListener('mouseup', e => {
+      if (e.button !== 0) return
+      dragstartLock = false
       const targetNode = document.querySelector('.collide-node')
       if (targetNode) {
         const dragNode = dragData.element

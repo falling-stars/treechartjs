@@ -62,6 +62,9 @@ const chart = new TreeChart({
       insertNext: true
     }
   },
+  ondragstart() {
+    console.log('dragstart')
+  },
   ondragend() {
     console.log('dragend')
   },
