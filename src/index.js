@@ -514,6 +514,26 @@ class TreeChart {
     this.reloadLink()
   }
 
+  removeNode(target) {
+    const targetKey = isElement(target) ? this.getKey(target) : target
+    const targetNode = isElement(target) ? target : this.getNode(target)
+    if (targetNode) {
+      if (targetNode === this.rootNode) return
+      const targetNodeContainer = targetNode.parentElement
+      const parentNode = this.getParentNode(targetNode)
+
+      // 删除父节点data-children
+      const parentChildrenKeys = parentNode.getAttribute('data-children').split(',')
+      const targetIndex = parentChildrenKeys.indexOf(targetKey)
+      targetIndex > -1 && parentChildrenKeys.splice(targetIndex, 1)
+      parentNode.setAttribute('data-children', parentChildrenKeys.join())
+
+      // 移除当前节点
+      targetNodeContainer.parentElement.removeChild(targetNodeContainer)
+      this.reloadLink()
+    }
+  }
+
   getCurrentEventNode(target) {
     // 忽略展开按钮
     if (target.classList.contains('tree-chart-unfold')) return
