@@ -300,6 +300,7 @@ class TreeChart {
     this.createNodes(data, this.rootContainer, false)
     this.unfold && this.setUnfold()
     this.reloadLink()
+    this.setEventHook(true)
   }
 
   reRenderNode(key, data) {
@@ -554,13 +555,13 @@ class TreeChart {
     return element && (ghostTranslateX !== 0 || ghostTranslateY !== 0)
   }
 
-  setEventHook() {
+  setEventHook(reload) {
     const options = this.options
     const rootNodeContainer = this.rootNodeContainer
 
     // 用mouseEvent来实现click主要是为了区别dragstart和click的行为
     const clickHook = options.onclick
-    if (typeof clickHook === 'function') {
+    if (!reload && typeof clickHook === 'function') {
       let oldNode = null
       rootNodeContainer.addEventListener('mousedown', e => {
         if (e.button !== 0) return
