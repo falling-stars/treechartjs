@@ -516,7 +516,7 @@ class TreeChart {
   }
 
   removeNode(target) {
-    const targetKey = isElement(target) ? this.getKey(target) : target
+    const targetKey = isElement(target) ? this.getKey(target) : target.toString()
     const targetNode = isElement(target) ? target : this.getNode(target)
     if (targetNode) {
       if (targetNode === this.rootNode) return
