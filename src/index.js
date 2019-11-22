@@ -211,7 +211,7 @@ class TreeChart {
       link = document.querySelector(`.${lineClassName}`)
     } else {
       link = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-      link.classList.add(lineClassName, `line-form-${from.key}`)
+      link.classList.add(lineClassName, `line-from-${from.key}`)
       this.linkContainer.appendChild(link)
     }
     const centerX = (to.x - from.x) / 2
