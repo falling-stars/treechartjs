@@ -351,6 +351,7 @@ class TreeChart {
     node.querySelector('.tree-chart-unfold') && this.addUnfoldElement(newNode)
     parentElement.insertBefore(newNode, node)
     parentElement.removeChild(node)
+    this.setNodeHook(newNode)
   }
 
   reloadLink() {
