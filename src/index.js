@@ -203,7 +203,7 @@ class TreeChart {
   }
 
   // 两点间连线
-  drawLine(from, to) {
+  drawLine(from, to, isTemp) {
     const options = this.options
     const lineClassName = `line-${from.key}-${to.key}`
     let link = null
@@ -212,6 +212,7 @@ class TreeChart {
     } else {
       link = document.createElementNS('http://www.w3.org/2000/svg', 'path')
       link.classList.add(lineClassName, `line-from-${from.key}`)
+      isTemp && link.classList.add('is-temp-line')
       this.linkContainer.appendChild(link)
     }
     const centerX = (to.x - from.x) / 2
@@ -730,7 +731,7 @@ class TreeChart {
   }
 
   removeDragEffect() {
-    const tempLink = this.linkContainer.querySelector('.line-from-to')
+    const tempLink = this.linkContainer.querySelector('.is-temp-line')
     tempLink && this.linkContainer.removeChild(tempLink)
     const collideNode = document.querySelector('.collide-node')
     collideNode && collideNode.classList.remove('collide-node', 'become-previous', 'become-next', 'become-child')
@@ -812,12 +813,12 @@ class TreeChart {
       from = {
         x: parentPosition.right,
         y: (parentPosition.top + parentPosition.bottom) / 2,
-        key: 'from'
+        key: parentKey
       }
       to = {
         x: coverNodeLeft,
         y: insertType === 'previous' ? coverNodeTop - 20 : coverNodeBottom + 20,
-        key: 'to'
+        key: 'temp'
       }
     } else {
       const createTempChildNode = () => {
@@ -840,14 +841,14 @@ class TreeChart {
         to = {
           x: coverNodeRight + this.options.distanceX,
           y: (coverNodeTop + coverNodeBottom) / 2,
-          key: 'to'
+          key: 'temp'
         }
         this.resize()
       }
       from = {
         x: coverNodeRight,
         y: (coverNodeTop + coverNodeBottom) / 2,
-        key: 'from'
+        key: coverNodeKey
       }
       // 有子节点的情况
       if (coverNode.nextElementSibling) {
@@ -861,7 +862,7 @@ class TreeChart {
           to = {
             x: childPreviousLeft,
             y: childPreviousBottom + 20,
-            key: 'to'
+            key: 'temp'
           }
         }
       } else {
@@ -870,7 +871,7 @@ class TreeChart {
       }
     }
 
-    this.drawLine(from, to)
+    this.drawLine(from, to, true)
   }
 
   // 获取拖动过程中碰撞的元素

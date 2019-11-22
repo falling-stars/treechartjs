@@ -6,6 +6,8 @@
   .is-node-container {
     position: relative;
     z-index: 2;
+    min-height: 100%;
+    min-width: 100%;
     &.cursor-move {
       cursor: move;
     }
@@ -107,7 +109,7 @@
       stroke: black;
       stroke-linecap: round;
     }
-    .line-from-to {
+    .is-temp-line {
       stroke: #ff9a36;
     }
   }
