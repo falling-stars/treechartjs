@@ -2,6 +2,44 @@ import './index.scss'
 
 const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
 const childrenIsFold = node => Boolean(node.querySelector('.can-unfold'))
+const hasChildren = node => Boolean(node.getAttribute('data-children'))
+const addUnfoldElement = node => {
+  if (node.querySelector('.tree-chart-unfold')) return
+  const unfoldElement = document.createElement('div')
+  unfoldElement.classList.add('tree-chart-unfold')
+  unfoldElement.innerHTML = '<div></div><div></div>'
+  node.appendChild(unfoldElement)
+}
+const removeUnfoldElement = node => {
+  const unfoldElement = node.querySelector('.tree-chart-unfold')
+  unfoldElement && node.removeChild(unfoldElement)
+}
+const getChildrenContainer = node => node.nextElementSibling
+const removeChildrenContainer = node => {
+  const childrenContainer = getChildrenContainer(node)
+  childrenContainer.parentElement.removeChild(childrenContainer)
+}
+const addChildrenKey = (node, key) => {
+  const oldChildrenKey = node.getAttribute('data-children')
+  if (oldChildrenKey) {
+    node.setAttribute('data-children', `${oldChildrenKey},key`)
+  } else {
+    node.setAttribute('data-children', key)
+  }
+}
+const removeChildrenKey = (node, key) => {
+  const oldChildrenKey = node.getAttribute('data-children')
+  if (oldChildrenKey) {
+    const keyList = oldChildrenKey.split(',')
+    const index = keyList.indexOf(key)
+    index > -1 && keyList.splice(index, 1)
+    if (keyList.length) {
+      node.setAttribute('data-children', keyList.join())
+    } else {
+      node.removeAttribute('data-children')
+    }
+  }
+}
 
 class TreeChart {
   constructor(options) {
@@ -100,9 +138,7 @@ class TreeChart {
     const node = this.createNode(data)
 
     // 创建展开收起按钮
-    if (existChildren && this.unfold) {
-      this.addUnfoldElement(node)
-    }
+    existChildren && this.unfold && addUnfoldElement(node)
 
     nodeContainer.appendChild(node)
     parentNodeContainer.appendChild(nodeContainer)
@@ -141,13 +177,6 @@ class TreeChart {
       }
       node.setAttribute('data-children', childrenKeys.join())
     }
-  }
-
-  addUnfoldElement(node) {
-    const unfoldElement = document.createElement('div')
-    unfoldElement.classList.add('tree-chart-unfold')
-    unfoldElement.innerHTML = '<div></div><div></div>'
-    node.appendChild(unfoldElement)
   }
 
   // 根据节点间父子关系生成连线信息
@@ -350,7 +379,7 @@ class TreeChart {
     // 替换节点
     const newNode = this.createNode(data)
     childrenKeys && newNode.setAttribute('data-children', childrenKeys)
-    node.querySelector('.tree-chart-unfold') && this.addUnfoldElement(newNode)
+    node.querySelector('.tree-chart-unfold') && addUnfoldElement(newNode)
     parentElement.insertBefore(newNode, node)
     parentElement.removeChild(node)
     this.setNodeHook(newNode)
@@ -437,83 +466,69 @@ class TreeChart {
 
   insertNode(target, origin, type) {
     const targetNode = isElement(target) ? target : this.getNode(target)
-    const targetNodeContainer = targetNode.parentElement
-    const targetParentNode = this.getParentNode(targetNode)
-
     // 限制不能给根节点添加兄弟元素
     if (targetNode === this.rootNode && /next|previous/.test(type)) return
 
-    const isNewNode = /Object/.test(Object.prototype.toString.call(origin))
+    const targetNodeContainer = targetNode.parentElement
+    const targetParentNode = this.getParentNode(targetNode)
+
+    const addNewNode = /Object/.test(Object.prototype.toString.call(origin))
 
     let originNode = null
-    if (isNewNode) {
+    if (addNewNode) {
       originNode = this.createNode(origin)
     } else {
       originNode = isElement(origin) ? origin : this.getNode(origin)
     }
     let originNodeContainer = null
-    if (isNewNode) {
+    if (addNewNode) {
       originNodeContainer = this.createNodeContainer()
       originNodeContainer.appendChild(originNode)
     } else {
       originNodeContainer = originNode.parentElement
     }
-    const originKey = this.getKey(isNewNode ? origin : originNode)
+    const originKey = this.getKey(addNewNode ? origin : originNode)
     const originParentNode = this.getParentNode(originNode)
 
     if (type === 'child') {
-      const childContainer = targetNodeContainer.querySelector('.tree-chart-children-container')
       // 本身存在子节点的情况
-      if (childContainer) {
-        childContainer.appendChild(originNodeContainer)
-        const childKeyStr = targetNode.getAttribute('data-children') || ''
-        targetNode.setAttribute('data-children', `${childKeyStr},${originKey}`)
+      if (hasChildren(targetNode)) {
+        getChildrenContainer(targetNode).appendChild(originNodeContainer)
       } else {
         // 没有任何子节点的话创建一个容器
         const newChildContainer = document.createElement('div')
         newChildContainer.classList.add('tree-chart-children-container')
         newChildContainer.style.marginLeft = `${this.options.distanceX}px`
         newChildContainer.appendChild(originNodeContainer)
-        targetNodeContainer.appendChild(newChildContainer)
-        targetNode.setAttribute('data-children', originKey)
+        targetNode.parentElement.appendChild(newChildContainer)
       }
+      addChildrenKey(targetNode, originKey)
     }
+    const parentChildrenContainer = getChildrenContainer(this.getParentNode(targetNode))
     if (type === 'previous') {
-      targetNodeContainer.parentElement.insertBefore(originNodeContainer, targetNodeContainer)
-      targetParentNode.setAttribute('data-children', `${targetParentNode.getAttribute('data-children')},${originKey}`)
+      parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer)
+      addChildrenKey(targetParentNode, originKey)
     }
     if (type === 'next') {
-      targetNodeContainer.parentElement.insertBefore(originNodeContainer, targetNodeContainer.nextElementSibling)
-      targetParentNode.setAttribute('data-children', `${targetParentNode.getAttribute('data-children')},${originKey}`)
+      parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer.nextElementSibling)
+      addChildrenKey(targetParentNode, originKey)
     }
 
     // 删除原先的节点的data-children
-    if (!isNewNode) {
-      const oldChildrenKeys = originParentNode.getAttribute('data-children').split(',')
-      if (oldChildrenKeys.length > 1) {
-        oldChildrenKeys.splice(oldChildrenKeys.indexOf(originKey), 1)
-        originParentNode.setAttribute('data-children', oldChildrenKeys.join())
-      } else {
-        originParentNode.removeAttribute('data-children')
-        originParentNode.parentElement.removeChild(originParentNode.nextElementSibling)
-      }
-    }
+    !addNewNode && removeChildrenKey(originParentNode, originKey)
 
     // 处理收起展开状态
     if (this.unfold) {
-      // 节点被移除后没有子节点就移除展开元素
-      if (!isNewNode && !originParentNode.nextElementSibling) {
-        const originUnfoldElement = originParentNode.querySelector('.tree-chart-unfold')
-        originUnfoldElement && originParentNode.removeChild(originUnfoldElement)
+      // 处理节点原位置的状态，没有子节点的话就移除对应元素
+      if (!addNewNode && !hasChildren(originParentNode)) {
+        removeUnfoldElement(originParentNode)
       }
-      // 作为子节点插入的元素检测父新的父元素是否有展开按钮
       if (type === 'child') {
-        const targetUnfoldElement = targetNode.querySelector('.tree-chart-unfold')
-        !targetUnfoldElement && this.addUnfoldElement(targetNode)
+        hasChildren(targetNode) && addUnfoldElement(targetNode)
       }
     }
 
-    isNewNode && this.setNodeHook(originNode)
+    addNewNode && this.setNodeHook(originNode)
     this.reloadLink()
   }
 
@@ -526,13 +541,16 @@ class TreeChart {
       const parentNode = this.getParentNode(targetNode)
 
       // 删除父节点data-children
-      const parentChildrenKeys = parentNode.getAttribute('data-children').split(',')
-      const targetIndex = parentChildrenKeys.indexOf(targetKey)
-      targetIndex > -1 && parentChildrenKeys.splice(targetIndex, 1)
-      parentNode.setAttribute('data-children', parentChildrenKeys.join())
+      removeChildrenKey(parentNode, targetKey)
 
       // 移除当前节点
       targetNodeContainer.parentElement.removeChild(targetNodeContainer)
+
+      // 如果当前节点是唯一的子节点就移除对应效果
+      if (!hasChildren(parentNode)) {
+        removeChildrenContainer(parentNode)
+        this.unfold && removeUnfoldElement(parentNode)
+      }
       this.reloadLink()
     }
   }

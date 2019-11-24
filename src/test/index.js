@@ -89,5 +89,9 @@ const chart = new TreeChart({
 
 setTimeout(() => {
   chart.reRenderNode('122', { name: 99999, id: 9999 })
-  chart.removeNode('11')
+  chart.removeNode('13')
+  chart.insertNode('111', '141', 'child')
+  setTimeout(() => {
+    chart.removeNode('111')
+  })
 }, 1000)
