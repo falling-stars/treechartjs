@@ -22,7 +22,7 @@ const removeChildrenContainer = node => {
 const addChildrenKey = (node, key) => {
   const oldChildrenKey = node.getAttribute('data-children')
   if (oldChildrenKey) {
-    node.setAttribute('data-children', `${oldChildrenKey},key`)
+    node.setAttribute('data-children', `${oldChildrenKey},${key}`)
   } else {
     node.setAttribute('data-children', key)
   }
