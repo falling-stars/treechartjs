@@ -503,19 +503,25 @@ class TreeChart {
         targetNode.parentElement.appendChild(newChildContainer)
       }
       addChildrenKey(targetNode, originKey)
-    }
-    const parentChildrenContainer = getChildrenContainer(this.getParentNode(targetNode))
-    if (type === 'previous') {
-      parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer)
-      addChildrenKey(targetParentNode, originKey)
-    }
-    if (type === 'next') {
-      parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer.nextElementSibling)
+    } else {
+      const parentChildrenContainer = getChildrenContainer(targetParentNode)
+      if (type === 'previous') {
+        parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer)
+      }
+      if (type === 'next') {
+        parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer.nextElementSibling)
+      }
       addChildrenKey(targetParentNode, originKey)
     }
 
-    // 删除原先的节点的data-children
-    !addNewNode && removeChildrenKey(originParentNode, originKey)
+    if (!addNewNode) {
+      // 删除原先的节点的data-children
+      removeChildrenKey(originParentNode, originKey)
+      // 如果移动节点后原位置没有兄弟节点的话移除childrenContainer容器
+      if (!hasChildren(originParentNode)) {
+        originParentNode.parentElement.removeChild(getChildrenContainer(originParentNode))
+      }
+    }
 
     // 处理收起展开状态
     if (this.unfold) {
