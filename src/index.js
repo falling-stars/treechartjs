@@ -328,7 +328,6 @@ class TreeChart {
   reRender(data) {
     this.rootNodeContainer.innerHTML = ''
     this.createNodes(data, this.rootNodeContainer, false)
-    this.unfold && this.setUnfold()
     this.reloadLink()
     this.setEventHook(true)
   }
