@@ -394,49 +394,6 @@ class TreeChart {
     return this.rootNodeContainer.querySelector(`.tree-chart-item-${key}`)
   }
 
-  getKey(data) {
-    return isElement(data) ? data.getAttribute('data-key') : data[this.options.keyField].toString()
-  }
-
-  getParentKey(key) {
-    const node = this.getNode(key)
-    if (node) {
-      const parentNode = this.getParentNode(node)
-      if (parentNode) {
-        return this.getKey(parentNode)
-      } else {
-        return null
-      }
-    }
-    return null
-  }
-
-  getPreviousKey(key) {
-    const node = this.getNode(key)
-    if (node) {
-      const previousNode = this.getPreviousSiblingNode(node)
-      if (previousNode) {
-        return this.getKey(previousNode)
-      } else {
-        return null
-      }
-    }
-    return null
-  }
-
-  getNextKey(key) {
-    const node = this.getNode(key)
-    if (node) {
-      const nextNode = this.getNextSiblingNode(node)
-      if (nextNode) {
-        return this.getKey(nextNode)
-      } else {
-        return null
-      }
-    }
-    return null
-  }
-
   getParentNode(target) {
     try {
       const node = isElement(target) ? target : this.getNode(target)
@@ -446,7 +403,7 @@ class TreeChart {
     }
   }
 
-  getPreviousSiblingNode(target) {
+  getPreviousNode(target) {
     try {
       const node = isElement(target) ? target : this.getNode(target)
       return node.parentElement.previousElementSibling.querySelector('.tree-chart-content')
@@ -455,13 +412,30 @@ class TreeChart {
     }
   }
 
-  getNextSiblingNode(target) {
+  getNextNode(target) {
     try {
       const node = isElement(target) ? target : this.getNode(target)
       return node.parentElement.nextElementSibling.querySelector('.tree-chart-content')
     } catch (e) {
       return null
     }
+  }
+
+  getKey(target) {
+    if (target === null) return null
+    return isElement(target) ? target.getAttribute('data-key') : target[this.options.keyField].toString()
+  }
+
+  getParentKey(target) {
+    return this.getKey(this.getParentNode(target))
+  }
+
+  getPreviousKey(target) {
+    return this.getKey(this.getPreviousNode(target))
+  }
+
+  getNextKey(target) {
+    return this.getKey(this.getNextNode(target))
   }
 
   insertNode(target, origin, type) {
@@ -781,9 +755,9 @@ class TreeChart {
     // 拖到父节点时只能作为兄弟节点插入
     const coverIsParent = coverNode === this.getParentNode(dragElement)
     // 禁止插入到下一个兄弟节点的上面
-    const coverIsNext = coverNode === this.getNextSiblingNode(dragElement)
+    const coverIsNext = coverNode === this.getNextNode(dragElement)
     // 禁止插入到上一个兄弟节点的下面
-    const coverIsPrevious = coverNode === this.getPreviousSiblingNode(dragElement)
+    const coverIsPrevious = coverNode === this.getPreviousNode(dragElement)
 
     const allowConfig = {
       child: !coverNode.classList.contains('not-allow-insert-child') && !coverIsParent,
