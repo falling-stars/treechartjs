@@ -40,6 +40,7 @@ const removeChildrenKey = (node, key) => {
     }
   }
 }
+const setNotAllowEffect = node => node.classList.add('not-allow-effect')
 
 class TreeChart {
   constructor(options) {
@@ -760,6 +761,8 @@ class TreeChart {
     collideNode && collideNode.classList.remove('collide-node', 'become-previous', 'become-next', 'become-child')
     const tempChildrenContainer = document.querySelector('.temp-children-container')
     tempChildrenContainer && tempChildrenContainer.parentElement.removeChild(tempChildrenContainer)
+    const notAllowEffect = document.querySelector('.not-allow-effect')
+    notAllowEffect && notAllowEffect.classList.remove('not-allow-effect')
   }
 
   // 生成拖动效果
@@ -771,6 +774,9 @@ class TreeChart {
     const dragElement = this.dragData.element
     const coverNodeKey = this.getKey(coverNode)
     const { top: coverNodeTop, bottom: coverNodeBottom, left: coverNodeLeft, right: coverNodeRight } = this.positionData[coverNodeKey]
+
+    // 不可拖到子节点上
+    if (dragElement.parentElement.contains(coverNode)) return setNotAllowEffect(coverNode)
 
     // 拖到父节点时只能作为兄弟节点插入
     const coverIsParent = coverNode === this.getParentNode(dragElement)
@@ -792,11 +798,11 @@ class TreeChart {
         break
       }
     }
-    if (!existAllow) return
+    if (!existAllow) return setNotAllowEffect(coverNode)
 
     // 如果被覆盖的是根节点的话只允许作为子节点插入
     if (coverNode === this.rootNode) {
-      if (!allowConfig.child) return
+      if (!allowConfig.child) return setNotAllowEffect(coverNode)
       insertType = 'child'
     } else {
       // 位置偏上或者偏下(45%)则认为是添加兄弟节点
@@ -826,7 +832,7 @@ class TreeChart {
         }
       }
 
-      if (insertType === '') return
+      if (insertType === '') return setNotAllowEffect(coverNode)
     }
     coverNode.classList.add(`become-${insertType}`, 'collide-node')
 
@@ -963,8 +969,6 @@ class TreeChart {
     leftTopCollide.forEach(item => {
       if (!rightBottomCollide.includes(item)) return
       const node = this.getNode(item)
-      // 不可拖到子节点上
-      if (this.dragData.element.parentElement.contains(node)) return
       collideNode.push({ node, key: item, position: this.positionData[item] })
     })
 
