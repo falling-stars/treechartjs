@@ -62,19 +62,19 @@ const chart = new TreeChart({
       insertNext: data.id !== 12
     }
   },
-  ondragstart() {
+  dragStart() {
     console.log('dragstart')
   },
-  ondragend() {
+  dragEnd() {
     console.log('dragend')
   },
-  onclick() {
+  click() {
     console.log('click')
   },
-  mouseenter() {
+  mouseEnter() {
     console.log('enter')
   },
-  mouseleave() {
+  mouseLeave() {
     console.log('leave')
   },
   contentRender(data) {

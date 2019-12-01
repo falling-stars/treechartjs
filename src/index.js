@@ -63,10 +63,11 @@ class TreeChart {
     this.unfold = this.options.unfold
     this.rootContainer = options.container
     this.rootContainer.classList.add('tree-chart')
+    this.setHooks()
     this.createNodes(options.data, this.rootContainer, true)
     this.unfold && this.setUnfold()
     this.createLink()
-    this.setEventHook()
+    this.setEvent()
     if (this.draggable) {
       this.setDrag()
       this.foolowScrollData = {
@@ -75,6 +76,22 @@ class TreeChart {
       }
     }
     this.resize()
+  }
+
+  setHooks() {
+    this.hooks = {
+      contentRender: null,
+      dragControl: null,
+      dragStart: null,
+      dragEnd: null,
+      click: null,
+      mouseEnter: null,
+      mouseLeave: null
+    }
+    for (const key in this.hooks) {
+      const hook = this.options[key]
+      if (typeof hook === 'function') this.hooks[key] = hook
+    }
   }
 
   createNode(data) {
@@ -87,9 +104,8 @@ class TreeChart {
     renderContainer.classList.add('tree-render-container')
 
     // 生成用户自定义模板
-    const contentRender = this.options.contentRender
-    if (typeof contentRender === 'function') {
-      const renderResult = contentRender(data)
+    if (this.hooks.contentRender) {
+      const renderResult = this.hooks.contentRender(data)
       if (typeof renderResult === 'string') {
         renderContainer.innerHTML = renderResult.replace(/>\s+</g, '><')
       } else if (isElement(renderResult)) {
@@ -104,15 +120,13 @@ class TreeChart {
 
     // 拖拽控制
     if (this.draggable) {
-      const options = this.options
-      const dragControl = options.dragControl
-      if (typeof dragControl === 'function') {
+      if (this.hooks.dragControl) {
         const controlConfig = Object.assign({
           drag: true,
           insertChild: true,
           insertPrevious: true,
           insertNext: true
-        }, dragControl(data))
+        }, this.hooks.dragControl(data))
         !controlConfig.drag && node.classList.add('not-allow-drag')
         !controlConfig.insertChild && node.classList.add('not-allow-insert-child')
         !controlConfig.insertPrevious && node.classList.add('not-allow-insert-previous')
@@ -330,7 +344,7 @@ class TreeChart {
     this.rootNodeContainer.innerHTML = ''
     this.createNodes(data, this.rootNodeContainer, false)
     this.reloadLink()
-    this.setEventHook(true)
+    this.setEvent(true)
   }
 
   reRenderNode(key, data) {
@@ -382,7 +396,7 @@ class TreeChart {
     node.querySelector('.tree-chart-unfold') && addUnfoldElement(newNode)
     parentElement.insertBefore(newNode, node)
     parentElement.removeChild(node)
-    this.setNodeHook(newNode)
+    this.setNodeEvent(newNode)
   }
 
   reloadLink() {
@@ -508,7 +522,7 @@ class TreeChart {
       }
     }
 
-    addNewNode && this.setNodeHook(originNode)
+    addNewNode && this.setNodeEvent(originNode)
     this.reloadLink()
   }
 
@@ -554,13 +568,12 @@ class TreeChart {
     return element && (ghostTranslateX !== 0 || ghostTranslateY !== 0)
   }
 
-  setEventHook(reload) {
-    const options = this.options
+  setEvent(reload) {
     const rootNodeContainer = this.rootNodeContainer
+    const hooks = this.hooks
 
-    // 用mouseEvent来实现click主要是为了区别dragstart和click的行为
-    const clickHook = options.onclick
-    if (!reload && typeof clickHook === 'function') {
+    // 用mouseEvent来实现click主要是为了区别dragStart和click的行为
+    if (!reload && hooks.click) {
       let oldNode = null
       rootNodeContainer.addEventListener('mousedown', e => {
         if (e.button !== 0) return
@@ -570,37 +583,36 @@ class TreeChart {
         if (e.button !== 0) return
         const node = this.getCurrentEventNode(e.target)
         if (!node) return
-        node === oldNode && !this.isDragging() && clickHook({ key: this.getKey(node), element: node }, e)
+        node === oldNode && !this.isDragging() && hooks.click({ key: this.getKey(node), element: node }, e)
       })
     }
 
-    if (typeof options.mouseenter === 'function' || typeof options.mouseleave === 'function') {
+    if (hooks.mouseEnter || hooks.mouseLeave) {
       rootNodeContainer.querySelectorAll('.tree-render-container').forEach(node => {
-        this.setNodeHook(node)
+        this.setNodeEvent(node)
       })
     }
   }
 
-  setNodeHook(node) {
-    const options = this.options
-    const mouseenterHook = options.mouseenter
-    const mouseleaveHook = options.mouseleave
+  setNodeEvent(node) {
+    const hooks = this.hooks
     const argumentData = { key: this.getKey(node), element: node }
-    typeof mouseenterHook === 'function' && node.addEventListener('mouseenter', e => {
+    hooks.mouseEnter && node.addEventListener('mouseenter', e => {
       // 忽略拖动被覆盖的情况
       if (this.isDragging()) return
-      mouseenterHook(argumentData, e)
+      hooks.mouseEnter(argumentData, e)
     })
-    typeof mouseleaveHook === 'function' && node.addEventListener('mouseleave', e => {
+    hooks.mouseLeave && node.addEventListener('mouseleave', e => {
       // 忽略拖动被覆盖的情况
       if (this.isDragging()) return
-      mouseleaveHook(argumentData, e)
+      hooks.mouseLeave(argumentData, e)
     })
   }
 
   // 绑定拖动事件
   setDrag() {
     const options = this.options
+    const hooks = this.hooks
     const rootNodeContainer = this.rootNodeContainer
     const rootContainer = this.rootContainer
 
@@ -621,7 +633,6 @@ class TreeChart {
     }
 
     let dragstartLock = false
-    const dragstartHook = typeof options.ondragstart === 'function' && options.ondragstart
 
     rootNodeContainer.addEventListener('mousedown', e => {
       if (e.button !== 0) return
@@ -654,9 +665,9 @@ class TreeChart {
         this.setDragEffect(ghostPosition)
         // 跟随滚动
         this.followScroll(ghostPosition)
-        if (!dragstartLock && dragstartHook) {
+        if (!dragstartLock && hooks.dragStart) {
           dragstartLock = true
-          dragstartHook({ key: this.getKey(dragData.element), element: dragData.element.childNodes[0] })
+          hooks.dragStart({ key: this.getKey(dragData.element), element: dragData.element.childNodes[0] })
         }
       }
     })
@@ -676,8 +687,7 @@ class TreeChart {
         if (type === 'child' && childrenIsFold(targetNode)) {
           this.toggleFold(this.getKey(targetNode))
         }
-        const dragendHook = options.ondragend
-        typeof dragendHook === 'function' && dragendHook(
+        hooks.dragEnd && hooks.dragEnd(
           { key: this.getKey(targetNode), element: targetNode },
           { key: this.getKey(dragNode), element: dragNode },
           type)
