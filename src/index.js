@@ -611,7 +611,6 @@ class TreeChart {
 
   // 绑定拖动事件
   setDrag() {
-    const options = this.options
     const hooks = this.hooks
     const rootNodeContainer = this.rootNodeContainer
     const rootContainer = this.rootContainer
@@ -671,6 +670,14 @@ class TreeChart {
         }
       }
     })
+    const createParams = node => ({
+      parentKey: this.getParentKey(node),
+      parentNode: this.getParentNode(node),
+      previousKey: this.getPreviousKey(node),
+      previousNode: this.getPreviousNode(node),
+      nextKey: this.getNextKey(node),
+      nextNode: this.getNextNode(node)
+    })
     rootNodeContainer.addEventListener('mouseup', e => {
       if (e.button !== 0) return
       dragstartLock = false
@@ -682,14 +689,17 @@ class TreeChart {
         if (targetNode.classList.contains('become-next')) type = 'next'
         if (targetNode.classList.contains('become-child')) type = 'child'
         this.cancelDrag()
+        const from = createParams(dragNode)
         this.insertNode(targetNode, dragNode, type)
         // 如果目标节点是折叠状态，插入子节点后自动展开
         if (type === 'child' && childrenIsFold(targetNode)) {
           this.toggleFold(this.getKey(targetNode))
         }
         hooks.dragEnd && hooks.dragEnd(
-          { key: this.getKey(targetNode), element: targetNode },
+          from,
+          createParams(dragNode),
           { key: this.getKey(dragNode), element: dragNode },
+          { key: this.getKey(targetNode), element: targetNode },
           type)
       }
     })
