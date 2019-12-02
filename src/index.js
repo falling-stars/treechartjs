@@ -643,7 +643,7 @@ class TreeChart {
       if (dragNode === this.rootNode) return
       // 用户禁止拖动的节点
       if (dragNode.classList.contains('not-allow-drag')) return
-      if (hooks.preventDrag && hooks.preventDrag(e, { key: this.getKey(dragNode), element: dragNode })) return 
+      if (hooks.preventDrag && hooks.preventDrag(e, { key: this.getKey(dragNode), element: dragNode })) return
       dragData.element = dragNode
       dragData.ghostElement = dragNode.cloneNode(true)
       const { left, top } = this.positionData[this.getKey(dragNode)]
@@ -771,7 +771,7 @@ class TreeChart {
     const dragElement = this.dragData.element
     // 不可拖到子节点上
     if (dragElement.parentElement.contains(coverNode)) return setNotAllowEffect(coverNode)
-    
+
     const coverNodeKey = this.getKey(coverNode)
     const { top: coverNodeTop, bottom: coverNodeBottom, left: coverNodeLeft, right: coverNodeRight } = this.positionData[coverNodeKey]
 
