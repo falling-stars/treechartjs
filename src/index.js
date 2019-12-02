@@ -1,4 +1,4 @@
-import './index.scss'
+﻿import './index.scss'
 
 const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
 const childrenIsFold = node => Boolean(node.querySelector('.can-unfold'))
@@ -84,6 +84,7 @@ class TreeChart {
       dragControl: null,
       dragStart: null,
       dragEnd: null,
+      preventDrag: null,
       click: null,
       mouseEnter: null,
       mouseLeave: null
@@ -641,6 +642,7 @@ class TreeChart {
       if (dragNode === this.rootNode) return
       // 用户禁止拖动的节点
       if (dragNode.classList.contains('not-allow-drag')) return
+      if (hook.preventDrag && hook.preventDrag(e, { key: this.getKey(dragNode), element: dragNode })) return 
       dragData.element = dragNode
       dragData.ghostElement = dragNode.cloneNode(true)
       const { left, top } = this.positionData[this.getKey(dragNode)]
