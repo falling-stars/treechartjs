@@ -1,6 +1,7 @@
-﻿import './index.scss'
+import './index.scss'
 
 const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
+const isNumber = data => /Number/.test(Object.prototype.toString.call(data))
 const childrenIsFold = node => Boolean(node.querySelector('.can-unfold'))
 const hasChildren = node => Boolean(node.getAttribute('data-children'))
 const addUnfoldElement = node => {
@@ -170,7 +171,7 @@ class TreeChart {
       for (const key in padding) {
         if (padding.hasOwnProperty(key) && /left|top|right|bottom/.test(key)) {
           let paddingValue = padding[key]
-          if (isNaN(paddingValue) || paddingValue < 0) continue
+          if (!isNumber(paddingValue) || paddingValue < 0) continue
           if (this.draggable && /top|bottom/.test(key) && paddingValue < 30) paddingValue = 30
           nodeContainer.style[`padding${key.replace(/^./, $ => $.toUpperCase())}`] = `${paddingValue}px`
         }
@@ -919,7 +920,7 @@ class TreeChart {
 
     const getRangeList = (flagItem, data, direct = 'after') => {
       let result = []
-      !isNaN(flagItem) && data.list.forEach(item => {
+      isNumber(flagItem) && data.list.forEach(item => {
         if (direct === 'before' ? item <= flagItem : item >= flagItem) {
           result = result.concat(data[item])
         }
