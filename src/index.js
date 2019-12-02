@@ -40,7 +40,7 @@ const removeChildrenKey = (node, key) => {
     }
   }
 }
-const setNotAllowEffect = node => node.classList.add('not-allow-effect')
+const setNotAllowEffect = node => node.classList.add('show-not-allow')
 
 class TreeChart {
   constructor(options) {
@@ -757,8 +757,8 @@ class TreeChart {
     collideNode && collideNode.classList.remove('collide-node', 'become-previous', 'become-next', 'become-child')
     const tempChildrenContainer = document.querySelector('.temp-children-container')
     tempChildrenContainer && tempChildrenContainer.parentElement.removeChild(tempChildrenContainer)
-    const notAllowEffect = document.querySelector('.not-allow-effect')
-    notAllowEffect && notAllowEffect.classList.remove('not-allow-effect')
+    const notAllowEffect = document.querySelector('.show-not-allow')
+    notAllowEffect && notAllowEffect.classList.remove('show-not-allow')
   }
 
   // 生成拖动效果
