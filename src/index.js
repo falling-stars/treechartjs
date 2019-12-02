@@ -146,18 +146,18 @@ class TreeChart {
   }
 
   // 数据数据结构生成节点
-  createNodes(data, parentNodeContainer, isRoot) {
+  createNodes(data, parentNodeContainer, isRoot, isReRender) {
     const options = this.options
     const existChildren = Array.isArray(data.children) && data.children.length
 
-    const nodeContainer = this.createNodeContainer()
+    const nodeContainer = isReRender ? parentNodeContainer : this.createNodeContainer()
     const node = this.createNode(data)
 
     // 创建展开收起按钮
     existChildren && this.unfold && addUnfoldElement(node)
 
     nodeContainer.appendChild(node)
-    parentNodeContainer.appendChild(nodeContainer)
+    !isReRender && parentNodeContainer.appendChild(nodeContainer)
 
     if (isRoot) {
       nodeContainer.classList.add('is-node-container')
@@ -343,7 +343,7 @@ class TreeChart {
 
   reRender(data) {
     this.rootNodeContainer.innerHTML = ''
-    this.createNodes(data, this.rootNodeContainer, false)
+    this.createNodes(data, this.rootNodeContainer, false, true)
     this.reloadLink()
     this.setEvent(true)
   }
