@@ -25,8 +25,8 @@
   .tree-chart-container {
     display: inline-block;
     white-space: nowrap;
-    veryical-align: middle;
     position: relative;
+    vertical-align: middle;
     &:last-child, &.is-node-container {
       margin-bottom: 0 !important;
     }
