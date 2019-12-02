@@ -51,6 +51,7 @@ class TreeChart {
         distanceX: 60,
         distanceY: 60,
         draggable: false,
+        dragScroll: false,
         // 光滑程度
         smooth: 50,
         scrollSpeed: 8,
@@ -77,6 +78,7 @@ class TreeChart {
       }
     }
     this.resize()
+    this.options.dragScroll && this.setDragScroll()
   }
 
   setHooks() {
@@ -1081,10 +1083,40 @@ class TreeChart {
     if (clearDirect) this.foolowScrollData.direct = ''
   }
 
-  destroy() {
-    if (this.draggable) {
-      window.removeEventListener('mouseup', this.cancelDrag)
+  setDragScroll() {
+    const rootContainer = this.rootContainer
+    const rootNodeContainer = this.rootNodeContainer
+    let lock = true
+
+    const getEventNode = target => {
+      if (target.classList.contains('tree-chart-content')) return target
+      let searchElement = target
+      while (this.rootNodeContainer !== searchElement) {
+        if (searchElement.classList.contains('tree-chart-content')) return searchElement
+        searchElement = searchElement.parentElement
+      }
+      return null
     }
+
+    rootNodeContainer.addEventListener('mousedown', e => {
+      if (e.button !== 0 || getEventNode(e.target)) return
+      lock = false
+    })
+    rootNodeContainer.addEventListener('mousemove', e => {
+      if (e.button !== 0 || lock) return
+      rootContainer.scrollLeft = rootContainer.scrollLeft - e.movementX
+      rootContainer.scrollTop = rootContainer.scrollTop - e.movementY
+    })
+    this.cancelDragScroll = e => {
+      if (e.button !== 0) return
+      lock = true
+    }
+    window.addEventListener('mouseup', this.cancelDragScroll)
+  }
+
+  destroy() {
+    this.cancelDrag && window.removeEventListener('mouseup', this.cancelDrag)
+    this.cancelDragScroll && window.removeEventListener('mouseup', this.cancelDragScroll)
   }
 }
 
