@@ -1103,6 +1103,7 @@ class TreeChart {
       lock = false
     })
     rootNodeContainer.addEventListener('mousemove', e => {
+      e.preventDefault()
       if (e.button !== 0 || lock) return
       rootContainer.scrollLeft = rootContainer.scrollLeft - e.movementX
       rootContainer.scrollTop = rootContainer.scrollTop - e.movementY
