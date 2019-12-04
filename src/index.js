@@ -279,7 +279,7 @@ class TreeChart {
     })
   }
 
-  toggleFold(data) {
+  toggleFold(data, unfold) {
     let unfoldElement = null
     if (typeof data === 'string') {
       unfoldElement = this.rootNodeContainer.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
@@ -288,7 +288,9 @@ class TreeChart {
     }
     if (unfoldElement) {
       const childNodeContainer = unfoldElement.parentElement.nextElementSibling
-      if (unfoldElement.classList.contains('can-unfold')) {
+      const isUnfold = unfoldElement.classList.contains('can-unfold')
+      if (isUnfold === unfold) return
+      if (isUnfold) {
         childNodeContainer.classList.remove('is-hidden')
         unfoldElement.classList.remove('can-unfold')
       } else {
