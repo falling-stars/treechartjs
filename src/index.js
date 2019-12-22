@@ -723,7 +723,6 @@ class TreeChart {
       dragData.eventOffsetY = 0
       this.removeDragEffect()
       this.stopFollowScroll()
-      this.resize()
     }
     this.cancelDrag = cancelDrag.bind(this)
     window.addEventListener('mouseup', this.cancelDrag)
@@ -873,7 +872,6 @@ class TreeChart {
           y: (coverNodeTop + coverNodeBottom) / 2,
           key: 'temp'
         }
-        this.resize()
       }
       from = {
         x: coverNodeRight,
@@ -1018,14 +1016,23 @@ class TreeChart {
   }
 
   resize() {
-    const { clientWidth, clientHeight } = this.rootNodeContainer
+    const options = this.options
+    const rootNodeContainer = this.rootNodeContainer
+
+    rootNodeContainer.style.width = 'auto'
+    let { clientWidth: width, clientHeight: height } = rootNodeContainer
+    width = `${this.draggable ? width + options.extendSpace : width}px`
+    height = `${height}px`
+    rootNodeContainer.style.width = width
+
     const linkContainer = this.linkContainer
-    linkContainer.setAttribute('width', `${clientWidth}px`)
-    linkContainer.setAttribute('height', `${clientHeight}px`)
-    if (this.dragData.ghostContainer) {
+    linkContainer.setAttribute('width', width)
+    linkContainer.setAttribute('height', height)
+
+    if (this.draggable) {
       const ghostContainerStyle = this.dragData.ghostContainer.style
-      ghostContainerStyle.width = `${clientWidth}px`
-      ghostContainerStyle.height = `${clientHeight}px`
+      ghostContainerStyle.width = width
+      ghostContainerStyle.height = height
     }
   }
 

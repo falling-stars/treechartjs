@@ -52,7 +52,9 @@ const chart = new TreeChart({
   smooth: 60,
   scrollTriggerDistance: 30,
   unfold: true,
+  extendSpace: 392,
   padding: {
+    right: 0,
     top: 50
   },
   dragControl(data) {
@@ -88,11 +90,11 @@ const chart = new TreeChart({
   }
 })
 
-setTimeout(() => {
-  chart.reRenderNode('122', { name: 99999, id: 9999 })
-  chart.removeNode('13')
-  chart.insertNode('111', '141', 'child')
-  setTimeout(() => {
-    chart.removeNode('111')
-  })
-}, 1000)
+// setTimeout(() => {
+//   chart.reRenderNode('122', { name: 99999, id: 9999 })
+//   chart.removeNode('13')
+//   chart.insertNode('111', '141', 'child')
+//   setTimeout(() => {
+//     chart.removeNode('111')
+//   })
+// }, 1000)
