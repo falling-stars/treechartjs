@@ -57,7 +57,8 @@ class TreeChart {
         scrollSpeed: 8,
         // 触发滚动的距离
         scrollTriggerDistance: 50,
-        unfold: false
+        unfold: false,
+        extendSpace: 0
       },
       options
     )
