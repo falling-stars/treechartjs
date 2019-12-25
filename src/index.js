@@ -1021,10 +1021,12 @@ class TreeChart {
     const rootNodeContainer = this.rootNodeContainer
 
     rootNodeContainer.style.width = 'auto'
+    rootNodeContainer.style.minWidth = 'auto'
     let { clientWidth: width, clientHeight: height } = rootNodeContainer
     width = `${this.draggable ? width + options.extendSpace : width}px`
     height = `${height}px`
     rootNodeContainer.style.width = width
+    rootNodeContainer.style.minWidth = '100%'
 
     const linkContainer = this.linkContainer
     linkContainer.setAttribute('width', width)
