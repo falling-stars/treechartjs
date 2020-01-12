@@ -44,8 +44,21 @@ const removeChildrenKey = (node, key) => {
 const setNotAllowEffect = node => node.classList.add('show-not-allow')
 
 class TreeChart {
-  constructor(options) {
-    this.options = Object.assign(
+  constructor(optionData) {
+    this.initData(optionData)
+    this.setHooks()
+    this.rootContainer.classList.add('tree-chart')
+    this.createNodes(optionData.data, this.rootContainer, true)
+    this.unfold && this.setUnfold()
+    this.createLink()
+    this.setEvent()
+    this.draggable && this.setDrag()
+    this.resize()
+    this.option.dragScroll && this.setDragScroll()
+  }
+
+  initData(optionData) {
+    const option = Object.assign(
       {
         keyField: 'id',
         distanceX: 60,
@@ -60,26 +73,18 @@ class TreeChart {
         unfold: false,
         extendSpace: 0
       },
-      options
+      optionData
     )
-    this.draggable = this.options.draggable
-    this.unfold = this.options.unfold
-    this.rootContainer = options.container
-    this.rootContainer.classList.add('tree-chart')
-    this.setHooks()
-    this.createNodes(options.data, this.rootContainer, true)
-    this.unfold && this.setUnfold()
-    this.createLink()
-    this.setEvent()
-    if (this.draggable) {
-      this.setDrag()
+    this.draggable = option.draggable
+    if (option.draggable) {
       this.foolowScrollData = {
         interval: null,
         direct: ''
       }
     }
-    this.resize()
-    this.options.dragScroll && this.setDragScroll()
+    this.unfold = option.unfold
+    this.rootContainer = option.container
+    this.option = option
   }
 
   setHooks() {
@@ -94,7 +99,7 @@ class TreeChart {
       mouseLeave: null
     }
     for (const key in this.hooks) {
-      const hook = this.options[key]
+      const hook = this.option[key]
       if (typeof hook === 'function') this.hooks[key] = hook
     }
   }
@@ -145,13 +150,13 @@ class TreeChart {
   createNodeContainer() {
     const nodeContainer = document.createElement('div')
     nodeContainer.classList.add('tree-chart-container')
-    nodeContainer.style.marginBottom = `${this.options.distanceY}px`
+    nodeContainer.style.marginBottom = `${this.option.distanceY}px`
     return nodeContainer
   }
 
   // 数据数据结构生成节点
   createNodes(data, parentNodeContainer, isRoot, isReRender) {
-    const options = this.options
+    const option = this.option
     const existChildren = Array.isArray(data.children) && data.children.length
 
     const nodeContainer = isReRender ? parentNodeContainer : this.createNodeContainer()
@@ -170,7 +175,7 @@ class TreeChart {
         right: 30,
         bottom: 30,
         left: 30
-      }, options.padding)
+      }, option.padding)
       for (const key in padding) {
         if (padding.hasOwnProperty(key) && /left|top|right|bottom/.test(key)) {
           let paddingValue = padding[key]
@@ -186,7 +191,7 @@ class TreeChart {
     if (existChildren) {
       const childrenContainer = document.createElement('div')
       childrenContainer.classList.add('tree-chart-children-container')
-      childrenContainer.style.marginLeft = `${options.distanceX}px`
+      childrenContainer.style.marginLeft = `${option.distanceX}px`
       nodeContainer.appendChild(childrenContainer)
       const childrenKeys = []
       for (const key in data.children) {
@@ -253,7 +258,7 @@ class TreeChart {
 
   // 两点间连线
   drawLine(from, to, isTemp) {
-    const options = this.options
+    const option = this.option
     const lineClassName = `line-${from.key}-${to.key}`
     let link = null
     if (document.querySelector(`.${lineClassName}`)) {
@@ -268,7 +273,7 @@ class TreeChart {
     const centerY = (to.y - from.y) / 2
     const M = `${from.x} ${from.y}`
     const L = `${to.x} ${to.y}`
-    const Q1 = `${from.x + centerX - options.smooth / 100 * centerX} ${from.y}`
+    const Q1 = `${from.x + centerX - option.smooth / 100 * centerX} ${from.y}`
     const Q2 = `${from.x + centerX} ${from.y + centerY}`
     link.setAttribute('d', `M${M} Q${Q1} ${Q2} T ${L}`)
   }
@@ -444,7 +449,7 @@ class TreeChart {
 
   getKey(target) {
     if (target === null) return null
-    return isElement(target) ? target.getAttribute('data-key') : target[this.options.keyField].toString()
+    return isElement(target) ? target.getAttribute('data-key') : target[this.option.keyField].toString()
   }
 
   getParentKey(target) {
@@ -493,7 +498,7 @@ class TreeChart {
         // 没有任何子节点的话创建一个容器
         const newChildContainer = document.createElement('div')
         newChildContainer.classList.add('tree-chart-children-container')
-        newChildContainer.style.marginLeft = `${this.options.distanceX}px`
+        newChildContainer.style.marginLeft = `${this.option.distanceX}px`
         newChildContainer.appendChild(originNodeContainer)
         targetNode.parentElement.appendChild(newChildContainer)
       }
@@ -854,7 +859,7 @@ class TreeChart {
       const createTempChildNode = () => {
         const childrenContainer = document.createElement('div')
         childrenContainer.classList.add('tree-chart-children-container', 'temp-children-container')
-        childrenContainer.style.marginLeft = `${this.options.distanceX}px`
+        childrenContainer.style.marginLeft = `${this.option.distanceX}px`
 
         const chartContainer = document.createElement('div')
         chartContainer.classList.add('tree-chart-container')
@@ -869,7 +874,7 @@ class TreeChart {
         coverNode.parentElement.appendChild(childrenContainer)
 
         to = {
-          x: coverNodeRight + this.options.distanceX,
+          x: coverNodeRight + this.option.distanceX,
           y: (coverNodeTop + coverNodeBottom) / 2,
           key: 'temp'
         }
@@ -1017,13 +1022,13 @@ class TreeChart {
   }
 
   resize() {
-    const options = this.options
+    const option = this.option
     const rootNodeContainer = this.rootNodeContainer
 
     rootNodeContainer.style.width = 'auto'
     rootNodeContainer.style.minWidth = 'auto'
     let { clientWidth: width, clientHeight: height } = rootNodeContainer
-    width = `${this.draggable ? width + options.extendSpace : width}px`
+    width = `${this.draggable ? width + option.extendSpace : width}px`
     height = `${height}px`
     rootNodeContainer.style.width = width
     rootNodeContainer.style.minWidth = '100%'
@@ -1042,7 +1047,7 @@ class TreeChart {
   followScroll({ left, top, right, bottom }) {
     const rootContainer = this.rootContainer
     const { scrollLeft, scrollTop, clientWidth, clientHeight, scrollWidth, scrollHeight } = rootContainer
-    const distance = this.options.scrollTriggerDistance
+    const distance = this.option.scrollTriggerDistance
     let direct = ''
     const hasRightContent = scrollWidth - scrollLeft > clientWidth
     const hasBottomContent = scrollHeight - scrollTop > clientHeight
@@ -1060,7 +1065,7 @@ class TreeChart {
     if (this.foolowScrollData.direct !== direct) {
       this.stopFollowScroll(false)
       this.foolowScrollData.direct = direct
-      const scrollSpeed = this.options.scrollSpeed
+      const scrollSpeed = this.option.scrollSpeed
       this.foolowScrollData.interval = setInterval(() => {
         if (direct === 'Left' || direct === 'Top') {
           rootContainer[`scroll${direct}`] -= scrollSpeed
