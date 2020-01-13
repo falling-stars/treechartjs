@@ -464,7 +464,7 @@ class TreeChart {
     return this.getKey(this.getNextNode(target))
   }
 
-  insertNode(target, origin, type) {
+  insertNode(target, origin, type, unReloadLink) {
     const targetNode = isElement(target) ? target : this.getNode(target)
     // 限制不能给根节点添加兄弟元素
     if (targetNode === this.rootNode && /next|previous/.test(type)) return
@@ -535,7 +535,7 @@ class TreeChart {
     }
 
     addNewNode && this.setNodeEvent(originNode)
-    this.reloadLink()
+    !unReloadLink && this.reloadLink()
   }
 
   removeNode(target) {
