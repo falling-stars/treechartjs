@@ -45,19 +45,16 @@ const setNotAllowEffect = node => node.classList.add('show-not-allow')
 
 class TreeChart {
   constructor(optionData) {
-    this.initData(optionData)
-    this.setHooks()
-    this.rootContainer.classList.add('tree-chart')
-    this.createNodes(optionData.data, this.rootContainer, true)
-    this.unfold && this.setUnfold()
-    this.createLink()
-    this.setEvent()
-    this.draggable && this.setDrag()
+    this.initOption(optionData)
+    this.initHooks()
+    this.initChart()
+    this.setUnfold()
+    this.setDrag()
     this.resize()
-    this.option.dragScroll && this.setDragScroll()
+    this.setDragScroll()
   }
 
-  initData(optionData) {
+  initOption(optionData) {
     const option = Object.assign(
       {
         keyField: 'id',
@@ -76,18 +73,22 @@ class TreeChart {
       optionData
     )
     this.draggable = option.draggable
-    if (option.draggable) {
-      this.foolowScrollData = {
-        interval: null,
-        direct: ''
-      }
-    }
     this.unfold = option.unfold
-    this.rootContainer = option.container
+    this.dragScroll = option.dragScroll
     this.option = option
   }
 
-  setHooks() {
+  initChart() {
+    const option = this.option
+    const rootContainer = option.container
+    rootContainer.classList.add('tree-chart')
+    this.rootContainer = rootContainer
+    this.createNodes(option.data, rootContainer, true)
+    this.createLink()
+    this.setClickHook()
+  }
+
+  initHooks() {
     this.hooks = {
       contentRender: null,
       dragControl: null,
@@ -127,6 +128,9 @@ class TreeChart {
       renderContainer.innerText = 'Please set contentRender function'
     }
     node.appendChild(renderContainer)
+
+    // 节点事件
+    this.setNodeEvent(renderContainer)
 
     // 拖拽控制
     if (this.draggable) {
@@ -279,6 +283,7 @@ class TreeChart {
   }
 
   setUnfold() {
+    if (!this.unfold) return
     this.rootNodeContainer.addEventListener('click', ({ target }) => {
       if (!target.classList.contains('tree-chart-unfold')) return
       this.toggleFold(target)
@@ -356,7 +361,6 @@ class TreeChart {
     this.rootNodeContainer.innerHTML = ''
     this.createNodes(data, this.rootNodeContainer, false, true)
     this.reloadLink()
-    this.setEvent(true)
   }
 
   reRenderNode(key, data) {
@@ -580,12 +584,11 @@ class TreeChart {
     return element && (ghostTranslateX !== 0 || ghostTranslateY !== 0)
   }
 
-  setEvent(reload) {
+  setClickHook() {
     const rootNodeContainer = this.rootNodeContainer
     const hooks = this.hooks
-
     // 用mouseEvent来实现click主要是为了区别dragStart和click的行为
-    if (!reload && hooks.click) {
+    if (hooks.click) {
       let oldNode = null
       rootNodeContainer.addEventListener('mousedown', e => {
         if (e.button !== 0) return
@@ -598,16 +601,11 @@ class TreeChart {
         node === oldNode && !this.isDragging() && hooks.click({ key: this.getKey(node), element: node }, e)
       })
     }
-
-    if (hooks.mouseEnter || hooks.mouseLeave) {
-      rootNodeContainer.querySelectorAll('.tree-render-container').forEach(node => {
-        this.setNodeEvent(node)
-      })
-    }
   }
 
   setNodeEvent(node) {
     const hooks = this.hooks
+    if (!hooks.mouseEnter && !hooks.mouseLeave) return
     const argumentData = { key: this.getKey(node), element: node }
     hooks.mouseEnter && node.addEventListener('mouseenter', e => {
       // 忽略拖动被覆盖的情况
@@ -623,6 +621,7 @@ class TreeChart {
 
   // 绑定拖动事件
   setDrag() {
+    if (!this.draggable) return
     const hooks = this.hooks
     const rootNodeContainer = this.rootNodeContainer
     const rootContainer = this.rootContainer
@@ -1045,6 +1044,7 @@ class TreeChart {
   }
 
   followScroll({ left, top, right, bottom }) {
+    if (!this.dragScroll) return
     const rootContainer = this.rootContainer
     const { scrollLeft, scrollTop, clientWidth, clientHeight, scrollWidth, scrollHeight } = rootContainer
     const distance = this.option.scrollTriggerDistance
@@ -1096,11 +1096,17 @@ class TreeChart {
   }
 
   stopFollowScroll(clearDirect = true) {
+    if (!this.dragScroll) return
     this.foolowScrollData.interval && clearInterval(this.foolowScrollData.interval)
     if (clearDirect) this.foolowScrollData.direct = ''
   }
 
   setDragScroll() {
+    if (!this.dragScroll) return
+    this.foolowScrollData = {
+      interval: null,
+      direct: ''
+    }
     const rootContainer = this.rootContainer
     const rootNodeContainer = this.rootNodeContainer
     let lock = true
