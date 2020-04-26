@@ -45,16 +45,16 @@ const setNotAllowEffect = node => node.classList.add('show-not-allow')
 
 class TreeChart {
   constructor(optionData) {
-    this.initOption(optionData)
+    this.mergeOptions(optionData)
     this.initHooks()
     this.initChart()
-    this.setUnfold()
+    this.foldable && this.setUnfold()
     this.setDrag()
     this.resize()
     this.setDragScroll()
   }
 
-  initOption(optionData) {
+  mergeOptions(optionData) {
     const option = Object.assign(
       {
         keyField: 'id',
@@ -73,7 +73,7 @@ class TreeChart {
       optionData
     )
     this.draggable = option.draggable
-    this.unfold = option.unfold
+    this.foldable = option.foldable
     this.dragScroll = option.dragScroll
     this.option = option
   }
@@ -167,7 +167,7 @@ class TreeChart {
     const node = this.createNode(data)
 
     // 创建展开收起按钮
-    existChildren && this.unfold && addUnfoldElement(node)
+    this.foldable && existChildren && addUnfoldElement(node)
 
     nodeContainer.appendChild(node)
     !isReRender && parentNodeContainer.appendChild(nodeContainer)
@@ -283,7 +283,6 @@ class TreeChart {
   }
 
   setUnfold() {
-    if (!this.unfold) return
     this.rootNodeContainer.addEventListener('click', ({ target }) => {
       if (!target.classList.contains('tree-chart-unfold')) return
       this.toggleFold(target)
@@ -528,7 +527,7 @@ class TreeChart {
     }
 
     // 处理收起展开状态
-    if (this.unfold) {
+    if (this.foldable) {
       // 处理节点原位置的状态，没有子节点的话就移除对应元素
       if (!addNewNode && !hasChildren(originParentNode)) {
         removeUnfoldElement(originParentNode)
@@ -559,7 +558,7 @@ class TreeChart {
       // 如果当前节点是唯一的子节点就移除对应效果
       if (!hasChildren(parentNode)) {
         removeChildrenContainer(parentNode)
-        this.unfold && removeUnfoldElement(parentNode)
+        this.foldable && removeUnfoldElement(parentNode)
       }
       this.reloadLink()
     }
