@@ -44,65 +44,172 @@ const removeChildrenKey = (node, key) => {
 const setNotAllowEffect = node => node.classList.add('show-not-allow')
 
 class TreeChart {
-  constructor(optionData) {
-    this.mergeOptions(optionData)
-    this.initHooks()
+  constructor(option) {
+    this.mergeOption(option)
     this.initChart()
-    this.foldable && this.setUnfold()
+    this.setEvent()
+  }
+
+  mergeOption(data) {
+    const option = {
+      keyField: 'id',
+      distanceX: 60,
+      distanceY: 60,
+      draggable: false,
+      canFold: false,
+      dragScroll: false,
+      // 光滑程度
+      smooth: 50,
+      scrollSpeed: 8,
+      // 触发滚动的距离
+      scrollTriggerDistance: 50,
+      unfold: false,
+      extendSpace: 0,
+      ...data
+    }
+    const { draggable, canFold, dragScroll } = option
+    this.draggable = draggable
+    this.canFold = canFold
+    this.dragScroll = dragScroll
+    this.option = option
+    this.initHooks()
+  }
+
+  initHooks() {
+    const controlHook = ['dragControl', 'preventDrag']
+    const eventHook = ['dragStart', 'dragEnd', 'click', 'mouseEnter', 'mouseLeave']
+
+    const hookList = ['contentRender', ...controlHook, ...eventHook]
+    this.hooks = {}
+    hookList.forEach(hookName => {
+      const hookItem = this.option[hookName]
+      if (typeof hookItem === 'function') this.hooks[hookName] = hookItem
+    })
+  }
+
+  initChart() {
+    const { container, data } = this.option
+    container.classList.add('tree-chart')
+    this.rootContainer = container
+    this.createNodes(data, container, true)
+    this.createLink()
+  }
+
+  // 数据数据结构生成节点
+  createNodes(data, parentNodeContainer, isInit, isReRender) {
+    const { distanceX, padding } = this.option
+    const childrenData = data.children
+    const existChildren = Array.isArray(childrenData) && childrenData.length
+
+    const nodeContainer = isReRender ? parentNodeContainer : this.createNodeContainer()
+    // 创建节点
+    const node = this.createNode(data)
+    // 创建展开收起按钮
+    this.canFold && existChildren && addUnfoldElement(node)
+    nodeContainer.appendChild(node)
+    !isReRender && parentNodeContainer.appendChild(nodeContainer)
+
+    if (isInit) {
+      nodeContainer.classList.add('is-node-container')
+      const paddingData = {
+        top: 30,
+        right: 30,
+        bottom: 30,
+        left: 30,
+        ...padding
+      }
+      for (const key in paddingData) {
+        if (/left|top|right|bottom/.test(key)) {
+          let value = paddingData[key]
+          if (!isNumber(value) || value < 0) continue
+          if (this.draggable && /top|bottom/.test(key) && value < 30) value = 30
+          nodeContainer.style[`padding${key.replace(/^./, $ => $.toUpperCase())}`] = `${value}px`
+        }
+      }
+      this.rootNode = node
+      this.chartElement = nodeContainer
+    }
+
+    if (existChildren) {
+      const childrenContainer = document.createElement('div')
+      childrenContainer.classList.add('tree-chart-children-container')
+      childrenContainer.style.marginLeft = `${distanceX}px`
+      nodeContainer.appendChild(childrenContainer)
+      const childrenKeys = []
+      for (const key in childrenData) {
+        const childrenItem = childrenData[key]
+        childrenKeys.push(this.getKey(childrenItem))
+        this.createNodes(childrenItem, childrenContainer)
+      }
+      node.setAttribute('data-children', childrenKeys.join())
+    }
+  }
+
+  // 根据节点间父子关系生成连线信息
+  createLink() {
+    const rootContainer = this.rootContainer
+    const chartElement = this.chartElement
+    if (this.linkContainer) {
+      this.linkContainer.innerHTML = ''
+    } else {
+      const linkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      this.linkContainer = linkContainer
+      linkContainer.classList.add('tree-chart-link-container')
+      rootContainer.appendChild(linkContainer)
+    }
+
+    const { left: offsetLeftValue, top: offsetTopValue } = rootContainer.getBoundingClientRect()
+    const { scrollLeft, scrollTop } = rootContainer
+    const nodeList = chartElement.querySelectorAll('.tree-chart-content')
+
+    this.setPositionData('init')
+    for (const item of nodeList) {
+      const childrenKeys = item.getAttribute('data-children')
+      const itemLayout = item.getBoundingClientRect()
+      const itemKey = this.getKey(item)
+      const childrenNodeContainer = item.nextElementSibling
+      // 忽略收起状态的节点
+      if (childrenKeys && !childrenNodeContainer.classList.contains('is-hidden')) {
+        const from = {
+          x: itemLayout.left - offsetLeftValue + item.offsetWidth + scrollLeft,
+          y: itemLayout.top - offsetTopValue + item.offsetHeight / 2 + scrollTop,
+          key: itemKey
+        }
+        childrenKeys.split(',').forEach(childKey => {
+          const childrenElement = this.getNode(childKey)
+          const childrenLayout = childrenElement.getBoundingClientRect()
+          const to = {
+            x: childrenLayout.left - offsetLeftValue + scrollLeft,
+            y: childrenLayout.top - offsetTopValue + childrenElement.offsetHeight / 2 + scrollTop,
+            key: childKey
+          }
+          this.drawLine(from, to)
+        })
+      }
+      this.draggable && this.setPositionData('add', {
+        left: itemLayout.left - offsetLeftValue + scrollLeft,
+        right: itemLayout.right - offsetLeftValue + scrollLeft,
+        top: itemLayout.top - offsetTopValue + scrollTop,
+        bottom: itemLayout.bottom - offsetTopValue + scrollTop,
+        key: itemKey
+      })
+    }
+    this.draggable && this.setPositionData('sort')
+  }
+
+  setEvent() {
+    this.canFold && this.setUnfold()
+    this.setClickHook()
     this.setDrag()
     this.resize()
     this.setDragScroll()
   }
 
-  mergeOptions(optionData) {
-    const option = Object.assign(
-      {
-        keyField: 'id',
-        distanceX: 60,
-        distanceY: 60,
-        draggable: false,
-        dragScroll: false,
-        // 光滑程度
-        smooth: 50,
-        scrollSpeed: 8,
-        // 触发滚动的距离
-        scrollTriggerDistance: 50,
-        unfold: false,
-        extendSpace: 0
-      },
-      optionData
-    )
-    this.draggable = option.draggable
-    this.foldable = option.foldable
-    this.dragScroll = option.dragScroll
-    this.option = option
-  }
-
-  initChart() {
-    const option = this.option
-    const rootContainer = option.container
-    rootContainer.classList.add('tree-chart')
-    this.rootContainer = rootContainer
-    this.createNodes(option.data, rootContainer, true)
-    this.createLink()
-    this.setClickHook()
-  }
-
-  initHooks() {
-    this.hooks = {
-      contentRender: null,
-      dragControl: null,
-      dragStart: null,
-      dragEnd: null,
-      preventDrag: null,
-      click: null,
-      mouseEnter: null,
-      mouseLeave: null
-    }
-    for (const key in this.hooks) {
-      const hook = this.option[key]
-      if (typeof hook === 'function') this.hooks[key] = hook
-    }
+  setUnfold() {
+    this.chartElement.addEventListener('click', ({ target }) => {
+      if (!target.classList.contains('tree-chart-unfold')) return
+      this.toggleFold(target)
+    })
   }
 
   createNode(data) {
@@ -152,112 +259,11 @@ class TreeChart {
   }
 
   createNodeContainer() {
+    const { distanceY } = this.option
     const nodeContainer = document.createElement('div')
     nodeContainer.classList.add('tree-chart-container')
-    nodeContainer.style.marginBottom = `${this.option.distanceY}px`
+    nodeContainer.style.marginBottom = `${distanceY}px`
     return nodeContainer
-  }
-
-  // 数据数据结构生成节点
-  createNodes(data, parentNodeContainer, isRoot, isReRender) {
-    const option = this.option
-    const existChildren = Array.isArray(data.children) && data.children.length
-
-    const nodeContainer = isReRender ? parentNodeContainer : this.createNodeContainer()
-    const node = this.createNode(data)
-
-    // 创建展开收起按钮
-    this.foldable && existChildren && addUnfoldElement(node)
-
-    nodeContainer.appendChild(node)
-    !isReRender && parentNodeContainer.appendChild(nodeContainer)
-
-    if (isRoot) {
-      nodeContainer.classList.add('is-node-container')
-      const padding = Object.assign({
-        top: 30,
-        right: 30,
-        bottom: 30,
-        left: 30
-      }, option.padding)
-      for (const key in padding) {
-        if (padding.hasOwnProperty(key) && /left|top|right|bottom/.test(key)) {
-          let paddingValue = padding[key]
-          if (!isNumber(paddingValue) || paddingValue < 0) continue
-          if (this.draggable && /top|bottom/.test(key) && paddingValue < 30) paddingValue = 30
-          nodeContainer.style[`padding${key.replace(/^./, $ => $.toUpperCase())}`] = `${paddingValue}px`
-        }
-      }
-      this.rootNode = node
-      this.rootNodeContainer = nodeContainer
-    }
-
-    if (existChildren) {
-      const childrenContainer = document.createElement('div')
-      childrenContainer.classList.add('tree-chart-children-container')
-      childrenContainer.style.marginLeft = `${option.distanceX}px`
-      nodeContainer.appendChild(childrenContainer)
-      const childrenKeys = []
-      for (const key in data.children) {
-        if (data.children.hasOwnProperty(key)) {
-          childrenKeys.push(this.getKey(data.children[key]))
-          this.createNodes(data.children[key], childrenContainer)
-        }
-      }
-      node.setAttribute('data-children', childrenKeys.join())
-    }
-  }
-
-  // 根据节点间父子关系生成连线信息
-  createLink() {
-    const rootContainer = this.rootContainer
-    const rootNodeContainer = this.rootNodeContainer
-    if (this.linkContainer) {
-      this.linkContainer.innerHTML = ''
-    } else {
-      const linkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-      this.linkContainer = linkContainer
-      linkContainer.classList.add('tree-chart-link-container')
-      rootContainer.appendChild(linkContainer)
-    }
-
-    const { left: offsetLeftValue, top: offsetTopValue } = rootContainer.getBoundingClientRect()
-    const { scrollLeft, scrollTop } = rootContainer
-    const nodeList = rootNodeContainer.querySelectorAll('.tree-chart-content')
-
-    this.setPositionData('init')
-    for (const item of nodeList) {
-      const childrenKeys = item.getAttribute('data-children')
-      const itemLayout = item.getBoundingClientRect()
-      const itemKey = this.getKey(item)
-      const childrenNodeContainer = item.nextElementSibling
-      // 忽略收起状态的节点
-      if (childrenKeys && !childrenNodeContainer.classList.contains('is-hidden')) {
-        const from = {
-          x: itemLayout.left - offsetLeftValue + item.offsetWidth + scrollLeft,
-          y: itemLayout.top - offsetTopValue + item.offsetHeight / 2 + scrollTop,
-          key: itemKey
-        }
-        childrenKeys.split(',').forEach(childKey => {
-          const childrenElement = this.getNode(childKey)
-          const childrenLayout = childrenElement.getBoundingClientRect()
-          const to = {
-            x: childrenLayout.left - offsetLeftValue + scrollLeft,
-            y: childrenLayout.top - offsetTopValue + childrenElement.offsetHeight / 2 + scrollTop,
-            key: childKey
-          }
-          this.drawLine(from, to)
-        })
-      }
-      this.draggable && this.setPositionData('add', {
-        left: itemLayout.left - offsetLeftValue + scrollLeft,
-        right: itemLayout.right - offsetLeftValue + scrollLeft,
-        top: itemLayout.top - offsetTopValue + scrollTop,
-        bottom: itemLayout.bottom - offsetTopValue + scrollTop,
-        key: itemKey
-      })
-    }
-    this.draggable && this.setPositionData('sort')
   }
 
   // 两点间连线
@@ -282,17 +288,10 @@ class TreeChart {
     link.setAttribute('d', `M${M} Q${Q1} ${Q2} T ${L}`)
   }
 
-  setUnfold() {
-    this.rootNodeContainer.addEventListener('click', ({ target }) => {
-      if (!target.classList.contains('tree-chart-unfold')) return
-      this.toggleFold(target)
-    })
-  }
-
   toggleFold(data, unfold) {
     let unfoldElement = null
     if (typeof data === 'string') {
-      unfoldElement = this.rootNodeContainer.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
+      unfoldElement = this.chartElement.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
     } else if (isElement(data)) {
       unfoldElement = data
     }
@@ -357,8 +356,8 @@ class TreeChart {
   }
 
   reRender(data) {
-    this.rootNodeContainer.innerHTML = ''
-    this.createNodes(data, this.rootNodeContainer, false, true)
+    this.chartElement.innerHTML = ''
+    this.createNodes(data, this.chartElement, false, true)
     this.reloadLink()
   }
 
@@ -420,7 +419,7 @@ class TreeChart {
   }
 
   getNode(key) {
-    return this.rootNodeContainer.querySelector(`.tree-chart-item-${key}`)
+    return this.chartElement.querySelector(`.tree-chart-item-${key}`)
   }
 
   getParentNode(target) {
@@ -527,7 +526,7 @@ class TreeChart {
     }
 
     // 处理收起展开状态
-    if (this.foldable) {
+    if (this.canFold) {
       // 处理节点原位置的状态，没有子节点的话就移除对应元素
       if (!addNewNode && !hasChildren(originParentNode)) {
         removeUnfoldElement(originParentNode)
@@ -558,7 +557,7 @@ class TreeChart {
       // 如果当前节点是唯一的子节点就移除对应效果
       if (!hasChildren(parentNode)) {
         removeChildrenContainer(parentNode)
-        this.foldable && removeUnfoldElement(parentNode)
+        this.canFold && removeUnfoldElement(parentNode)
       }
       this.reloadLink()
     }
@@ -566,10 +565,10 @@ class TreeChart {
 
   getCurrentEventNode(target) {
     // 忽略展开按钮
-    if (target.classList.contains('tree-chart-unfold')) return
+    if (target.classList.contains('tree-chart-unfold')) return null
     if (target.classList.contains('tree-chart-content')) return target
     let searchElement = target
-    while (this.rootNodeContainer !== searchElement) {
+    while (this.chartElement !== searchElement) {
       if (searchElement.classList.contains('tree-chart-content')) return searchElement
       searchElement = searchElement.parentElement
     }
@@ -584,22 +583,23 @@ class TreeChart {
   }
 
   setClickHook() {
-    const rootNodeContainer = this.rootNodeContainer
-    const hooks = this.hooks
+    const { click: clickHook } = this.hooks
+    if (!clickHook) return
+    const chartElement = this.chartElement
     // 用mouseEvent来实现click主要是为了区别dragStart和click的行为
-    if (hooks.click) {
-      let oldNode = null
-      rootNodeContainer.addEventListener('mousedown', e => {
-        if (e.button !== 0) return
-        oldNode = this.getCurrentEventNode(e.target)
-      })
-      rootNodeContainer.addEventListener('mouseup', e => {
-        if (e.button !== 0) return
-        const node = this.getCurrentEventNode(e.target)
-        if (!node) return
-        node === oldNode && !this.isDragging() && hooks.click({ key: this.getKey(node), element: node }, e)
-      })
-    }
+    let mouseDownNode = null
+    chartElement.addEventListener('mousedown', ({ button, target }) => {
+      if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
+      mouseDownNode = this.getCurrentEventNode(target)
+    })
+    chartElement.addEventListener('mouseup', e => {
+      const { button, target } = e
+      if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
+      const mouseUpNode = this.getCurrentEventNode(target)
+      if (mouseUpNode && mouseUpNode === mouseDownNode && !this.isDragging()) {
+        clickHook({ key: this.getKey(mouseUpNode), element: mouseUpNode }, e)
+      }
+    })
   }
 
   setNodeEvent(node) {
@@ -622,7 +622,7 @@ class TreeChart {
   setDrag() {
     if (!this.draggable) return
     const hooks = this.hooks
-    const rootNodeContainer = this.rootNodeContainer
+    const chartElement = this.chartElement
     const rootContainer = this.rootContainer
 
     // 设置镜像层
@@ -643,7 +643,7 @@ class TreeChart {
 
     let dragstartLock = false
 
-    rootNodeContainer.addEventListener('mousedown', e => {
+    chartElement.addEventListener('mousedown', e => {
       if (e.button !== 0) return
       const dragNode = this.getCurrentEventNode(e.target)
       if (!dragNode) return
@@ -658,14 +658,14 @@ class TreeChart {
       dragData.eventOffsetX = e.clientX + rootContainer.scrollLeft - left
       dragData.eventOffsetY = e.clientY + rootContainer.scrollTop - top
     })
-    rootNodeContainer.addEventListener('mousemove', e => {
+    chartElement.addEventListener('mousemove', e => {
       if (e.button !== 0) return
       if (dragData.element) {
         // 处理Chrome76版本长按不移动也会触发的情况
         if (e.movementX === 0 && e.movementY === 0) return
         // 清除文字选择对拖动的影响
         getSelection ? getSelection().removeAllRanges() : document.selection.empty()
-        rootNodeContainer.classList.add('cursor-move')
+        chartElement.classList.add('cursor-move')
         // 添加镜像元素
         !dragData.ghostContainer.contains(dragData.ghostElement) && dragData.ghostContainer.appendChild(dragData.ghostElement)
         dragData.ghostTranslateX = e.clientX + rootContainer.scrollLeft - dragData.eventOffsetX
@@ -689,7 +689,7 @@ class TreeChart {
       nextKey: this.getNextKey(node),
       nextNode: this.getNextNode(node)
     })
-    rootNodeContainer.addEventListener('mouseup', e => {
+    chartElement.addEventListener('mouseup', e => {
       if (e.button !== 0) return
       dragstartLock = false
       const targetNode = document.querySelector('.collide-node')
@@ -717,7 +717,7 @@ class TreeChart {
 
     const cancelDrag = () => {
       if (!dragData.element) return
-      this.rootNodeContainer.classList.remove('cursor-move')
+      this.chartElement.classList.remove('cursor-move')
       dragData.element = null
       dragData.ghostContainer.innerHTML = ''
       dragData.ghostElement = null
@@ -1021,15 +1021,15 @@ class TreeChart {
 
   resize() {
     const option = this.option
-    const rootNodeContainer = this.rootNodeContainer
+    const chartElement = this.chartElement
 
-    rootNodeContainer.style.width = 'auto'
-    rootNodeContainer.style.minWidth = 'auto'
-    let { clientWidth: width, clientHeight: height } = rootNodeContainer
+    chartElement.style.width = 'auto'
+    chartElement.style.minWidth = 'auto'
+    let { clientWidth: width, clientHeight: height } = chartElement
     width = `${this.draggable ? width + option.extendSpace : width}px`
     height = `${height}px`
-    rootNodeContainer.style.width = width
-    rootNodeContainer.style.minWidth = '100%'
+    chartElement.style.width = width
+    chartElement.style.minWidth = '100%'
 
     const linkContainer = this.linkContainer
     linkContainer.setAttribute('width', width)
@@ -1107,24 +1107,24 @@ class TreeChart {
       direct: ''
     }
     const rootContainer = this.rootContainer
-    const rootNodeContainer = this.rootNodeContainer
+    const chartElement = this.chartElement
     let lock = true
 
     const getEventNode = target => {
       if (target.classList.contains('tree-chart-content')) return target
       let searchElement = target
-      while (this.rootNodeContainer !== searchElement) {
+      while (this.chartElement !== searchElement) {
         if (searchElement.classList.contains('tree-chart-content')) return searchElement
         searchElement = searchElement.parentElement
       }
       return null
     }
 
-    rootNodeContainer.addEventListener('mousedown', e => {
+    chartElement.addEventListener('mousedown', e => {
       if (e.button !== 0 || getEventNode(e.target)) return
       lock = false
     })
-    rootNodeContainer.addEventListener('mousemove', e => {
+    chartElement.addEventListener('mousemove', e => {
       e.preventDefault()
       if (e.button !== 0 || lock) return
       rootContainer.scrollLeft = rootContainer.scrollLeft - e.movementX

@@ -51,7 +51,7 @@ const chart = new TreeChart({
   dragScroll: true,
   smooth: 60,
   scrollTriggerDistance: 30,
-  foldable: true,
+  canFold: true,
   extendSpace: 392,
   padding: {
     right: 0,
