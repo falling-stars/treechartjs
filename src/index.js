@@ -52,24 +52,21 @@ class TreeChart {
 
   mergeOption(data) {
     const option = {
-      keyField: 'id',
-      distanceX: 60,
-      distanceY: 60,
-      draggable: false,
-      canFold: false,
-      dragScroll: false,
-      // 光滑程度
-      smooth: 50,
-      scrollSpeed: 8,
-      // 触发滚动的距离
-      scrollTriggerDistance: 50,
-      unfold: false,
-      extendSpace: 0,
+      keyField: 'id', // 作为唯一ID的字段
+      distanceX: 60, // item的垂直间距
+      distanceY: 60, // item的水平间距
+      draggable: false, // 是否能拖拽item
+      allowFold: false, // 是否能折叠
+      dragScroll: false, // 是否开启拖拽滚动
+      scrollTriggerDistance: 50, // 触发滚动的距离
+      smooth: 50, // 光滑程度(0-100，100为直线)
+      scrollSpeed: 8, // 滚动速度
+      extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向)
       ...data
     }
-    const { draggable, canFold, dragScroll } = option
+    const { draggable, allowFold, dragScroll } = option
     this.draggable = draggable
-    this.canFold = canFold
+    this.allowFold = allowFold
     this.dragScroll = dragScroll
     this.option = option
     this.initHooks()
@@ -105,7 +102,7 @@ class TreeChart {
     // 创建节点
     const node = this.createNode(data)
     // 创建展开收起按钮
-    this.canFold && existChildren && addUnfoldElement(node)
+    this.allowFold && existChildren && addUnfoldElement(node)
     nodeContainer.appendChild(node)
     !isReRender && parentNodeContainer.appendChild(nodeContainer)
 
@@ -198,14 +195,14 @@ class TreeChart {
   }
 
   setEvent() {
-    this.canFold && this.setUnfold()
+    this.allowFold && this.setFoldEvent()
     this.setClickHook()
     this.setDrag()
     this.resize()
     this.setDragScroll()
   }
 
-  setUnfold() {
+  setFoldEvent() {
     this.chartElement.addEventListener('click', ({ target }) => {
       if (!target.classList.contains('tree-chart-unfold')) return
       this.toggleFold(target)
@@ -288,7 +285,7 @@ class TreeChart {
     link.setAttribute('d', `M${M} Q${Q1} ${Q2} T ${L}`)
   }
 
-  toggleFold(data, unfold) {
+  toggleFold(data, isFold) {
     let unfoldElement = null
     if (typeof data === 'string') {
       unfoldElement = this.chartElement.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
@@ -298,7 +295,7 @@ class TreeChart {
     if (unfoldElement) {
       const childNodeContainer = unfoldElement.parentElement.nextElementSibling
       const isUnfold = unfoldElement.classList.contains('can-unfold')
-      if (isUnfold === unfold) return
+      if (isUnfold === isFold) return
       if (isUnfold) {
         childNodeContainer.classList.remove('is-hidden')
         unfoldElement.classList.remove('can-unfold')
@@ -526,7 +523,7 @@ class TreeChart {
     }
 
     // 处理收起展开状态
-    if (this.canFold) {
+    if (this.allowFold) {
       // 处理节点原位置的状态，没有子节点的话就移除对应元素
       if (!addNewNode && !hasChildren(originParentNode)) {
         removeUnfoldElement(originParentNode)
@@ -557,7 +554,7 @@ class TreeChart {
       // 如果当前节点是唯一的子节点就移除对应效果
       if (!hasChildren(parentNode)) {
         removeChildrenContainer(parentNode)
-        this.canFold && removeUnfoldElement(parentNode)
+        this.allowFold && removeUnfoldElement(parentNode)
       }
       this.reloadLink()
     }
