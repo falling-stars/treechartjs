@@ -4,13 +4,6 @@ const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && d
 const isNumber = data => /Number/.test(Object.prototype.toString.call(data))
 const childrenIsFold = node => Boolean(node.querySelector('.can-unfold'))
 const hasChildren = node => Boolean(node.getAttribute('data-children'))
-const addUnfoldElement = node => {
-  if (node.querySelector('.tree-chart-unfold')) return
-  const unfoldElement = document.createElement('div')
-  unfoldElement.classList.add('tree-chart-unfold')
-  unfoldElement.innerHTML = '<div></div><div></div>'
-  node.appendChild(unfoldElement)
-}
 const removeUnfoldElement = node => {
   const unfoldElement = node.querySelector('.tree-chart-unfold')
   unfoldElement && node.removeChild(unfoldElement)
@@ -46,7 +39,7 @@ const setNotAllowEffect = node => node.classList.add('show-not-allow')
 class TreeChart {
   constructor(option) {
     this.mergeOption(option)
-    this.initChart()
+    this.createElement()
     this.setEvent()
   }
 
@@ -73,18 +66,26 @@ class TreeChart {
   }
 
   initHooks() {
-    const controlHook = ['dragControl', 'preventDrag']
-    const eventHook = ['dragStart', 'dragEnd', 'click', 'mouseEnter', 'mouseLeave']
-
-    const hookList = ['contentRender', ...controlHook, ...eventHook]
+    const controlHooks = [
+      'dragControl',
+      'preventDrag'
+    ]
+    const eventHooks = [
+      'dragStart',
+      'dragEnd',
+      'click',
+      'mouseEnter',
+      'mouseLeave'
+    ]
+    const hookList = ['contentRender', ...controlHooks, ...eventHooks]
     this.hooks = {}
-    hookList.forEach(hookName => {
-      const hookItem = this.option[hookName]
-      if (typeof hookItem === 'function') this.hooks[hookName] = hookItem
+    hookList.forEach(name => {
+      const handler = this.option[name]
+      if (typeof handler === 'function') this.hooks[name] = handler
     })
   }
 
-  initChart() {
+  createElement() {
     const { container, data } = this.option
     container.classList.add('tree-chart')
     this.rootContainer = container
@@ -96,13 +97,12 @@ class TreeChart {
   createNodes(data, parentNodeContainer, isInit, isReRender) {
     const { distanceX, padding } = this.option
     const childrenData = data.children
-    const existChildren = Array.isArray(childrenData) && childrenData.length
+    const existChildren = Array.isArray(childrenData) && childrenData.length > 0
 
     const nodeContainer = isReRender ? parentNodeContainer : this.createNodeContainer()
     // 创建节点
-    const node = this.createNode(data)
-    // 创建展开收起按钮
-    this.allowFold && existChildren && addUnfoldElement(node)
+    const node = this.createNodeElement(data)
+    this.allowFold && existChildren && this.createFoldButton(node)
     nodeContainer.appendChild(node)
     !isReRender && parentNodeContainer.appendChild(nodeContainer)
 
@@ -140,6 +140,61 @@ class TreeChart {
       }
       node.setAttribute('data-children', childrenKeys.join())
     }
+  }
+
+  createNodeElement(data) {
+    const node = document.createElement('div')
+    const key = this.getKey(data)
+    node.classList.add('tree-chart-content', `tree-chart-item-${key}`)
+    node.setAttribute('data-key', key)
+
+    const renderContainer = document.createElement('div')
+    renderContainer.classList.add('tree-render-container')
+
+    // 生成用户自定义模板
+    if (this.hooks.contentRender) {
+      const renderResult = this.hooks.contentRender(data)
+      if (typeof renderResult === 'string') {
+        renderContainer.innerHTML = renderResult.replace(/>\s+</g, '><')
+      } else if (isElement(renderResult)) {
+        renderContainer.appendChild(renderResult)
+      } else {
+        renderContainer.innerText = 'Please check contentRender return type is string or element'
+      }
+    } else {
+      renderContainer.innerText = 'Please set contentRender function'
+    }
+    node.appendChild(renderContainer)
+
+    // 节点事件
+    this.setNodeEvent(renderContainer)
+
+    // 拖拽控制
+    if (this.draggable) {
+      if (this.hooks.dragControl) {
+        const controlConfig = Object.assign({
+          drag: true,
+          insertChild: true,
+          insertPrevious: true,
+          insertNext: true
+        }, this.hooks.dragControl(data))
+        !controlConfig.drag && node.classList.add('not-allow-drag')
+        !controlConfig.insertChild && node.classList.add('not-allow-insert-child')
+        !controlConfig.insertPrevious && node.classList.add('not-allow-insert-previous')
+        !controlConfig.insertNext && node.classList.add('not-allow-insert-next')
+      }
+    }
+
+    return node
+  }
+
+  // 创建展开收起按钮
+  createFoldButton(nodeElement) {
+    if (nodeElement.querySelector('.tree-chart-unfold')) return
+    const foldButton = document.createElement('div')
+    foldButton.classList.add('tree-chart-unfold')
+    foldButton.innerHTML = '<div></div><div></div>'
+    nodeElement.appendChild(foldButton)
   }
 
   // 根据节点间父子关系生成连线信息
@@ -207,52 +262,6 @@ class TreeChart {
       if (!target.classList.contains('tree-chart-unfold')) return
       this.toggleFold(target)
     })
-  }
-
-  createNode(data) {
-    const node = document.createElement('div')
-    const key = this.getKey(data)
-    node.classList.add('tree-chart-content', `tree-chart-item-${key}`)
-    node.setAttribute('data-key', key)
-
-    const renderContainer = document.createElement('div')
-    renderContainer.classList.add('tree-render-container')
-
-    // 生成用户自定义模板
-    if (this.hooks.contentRender) {
-      const renderResult = this.hooks.contentRender(data)
-      if (typeof renderResult === 'string') {
-        renderContainer.innerHTML = renderResult.replace(/>\s+</g, '><')
-      } else if (isElement(renderResult)) {
-        renderContainer.appendChild(renderResult)
-      } else {
-        renderContainer.innerText = 'Please check contentRender return type is string or element'
-      }
-    } else {
-      renderContainer.innerText = 'Please set contentRender function'
-    }
-    node.appendChild(renderContainer)
-
-    // 节点事件
-    this.setNodeEvent(renderContainer)
-
-    // 拖拽控制
-    if (this.draggable) {
-      if (this.hooks.dragControl) {
-        const controlConfig = Object.assign({
-          drag: true,
-          insertChild: true,
-          insertPrevious: true,
-          insertNext: true
-        }, this.hooks.dragControl(data))
-        !controlConfig.drag && node.classList.add('not-allow-drag')
-        !controlConfig.insertChild && node.classList.add('not-allow-insert-child')
-        !controlConfig.insertPrevious && node.classList.add('not-allow-insert-previous')
-        !controlConfig.insertNext && node.classList.add('not-allow-insert-next')
-      }
-    }
-
-    return node
   }
 
   createNodeContainer() {
@@ -402,9 +411,9 @@ class TreeChart {
     }
 
     // 替换节点
-    const newNode = this.createNode(data)
+    const newNode = this.createNodeElement(data)
     childrenKeys && newNode.setAttribute('data-children', childrenKeys)
-    node.querySelector('.tree-chart-unfold') && addUnfoldElement(newNode)
+    node.querySelector('.tree-chart-unfold') && this.createFoldButton(newNode)
     parentElement.insertBefore(newNode, node)
     parentElement.removeChild(node)
     this.setNodeEvent(newNode)
@@ -475,7 +484,7 @@ class TreeChart {
 
     let originNode = null
     if (addNewNode) {
-      originNode = this.createNode(origin)
+      originNode = this.createNodeElement(origin)
     } else {
       originNode = isElement(origin) ? origin : this.getNode(origin)
     }
@@ -529,7 +538,7 @@ class TreeChart {
         removeUnfoldElement(originParentNode)
       }
       if (type === 'child') {
-        hasChildren(targetNode) && addUnfoldElement(targetNode)
+        hasChildren(targetNode) && this.createFoldButton(targetNode)
       }
     }
 
