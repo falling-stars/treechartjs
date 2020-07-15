@@ -57,6 +57,13 @@ class TreeChart {
       extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向)
       ...data
     }
+    option.padding = {
+      top: 30,
+      right: 30,
+      bottom: 30,
+      left: 30,
+      ...option.padding
+    }
     const { draggable, allowFold, dragScroll } = option
     this.draggable = draggable
     this.allowFold = allowFold
@@ -88,61 +95,54 @@ class TreeChart {
   createElement() {
     const { container, data } = this.option
     container.classList.add('tree-chart')
-    this.rootContainer = container
-    this.createNodes(data, container, true)
+    this.container = container
+    this.createNodes(data, container)
     this.createLink()
   }
 
   // 数据数据结构生成节点
-  createNodes(data, parentNodeContainer, isInit, isReRender) {
-    const { distanceX, padding } = this.option
-    const childrenData = data.children
-    const existChildren = Array.isArray(childrenData) && childrenData.length > 0
+  createNodes(data, parentNodeContainer, reRender) {
+    const { children } = data
+    const existChildren = Array.isArray(children) && children.length > 0
 
-    const nodeContainer = isReRender ? parentNodeContainer : this.createNodeContainer()
+    const nodeContainer = reRender ? parentNodeContainer : this.createNodeContainer()
     // 创建节点
-    const node = this.createNodeElement(data)
+    const node = this.createNode(data)
     this.allowFold && existChildren && this.createFoldButton(node)
     nodeContainer.appendChild(node)
-    !isReRender && parentNodeContainer.appendChild(nodeContainer)
+    !reRender && parentNodeContainer.appendChild(nodeContainer)
 
-    if (isInit) {
+    // 初始化时候
+    if (!this.nodesContainer) {
       nodeContainer.classList.add('is-node-container')
-      const paddingData = {
-        top: 30,
-        right: 30,
-        bottom: 30,
-        left: 30,
-        ...padding
-      }
-      for (const key in paddingData) {
+      const { padding } = this.option
+      for (const key in padding) {
         if (/left|top|right|bottom/.test(key)) {
-          let value = paddingData[key]
+          let value = padding[key]
           if (!isNumber(value) || value < 0) continue
           if (this.draggable && /top|bottom/.test(key) && value < 30) value = 30
           nodeContainer.style[`padding${key.replace(/^./, $ => $.toUpperCase())}`] = `${value}px`
         }
       }
       this.rootNode = node
-      this.chartElement = nodeContainer
+      this.nodesContainer = nodeContainer
     }
 
     if (existChildren) {
       const childrenContainer = document.createElement('div')
       childrenContainer.classList.add('tree-chart-children-container')
-      childrenContainer.style.marginLeft = `${distanceX}px`
+      childrenContainer.style.marginLeft = `${this.option.distanceX}px`
       nodeContainer.appendChild(childrenContainer)
-      const childrenKeys = []
-      for (const key in childrenData) {
-        const childrenItem = childrenData[key]
-        childrenKeys.push(this.getKey(childrenItem))
-        this.createNodes(childrenItem, childrenContainer)
-      }
-      node.setAttribute('data-children', childrenKeys.join())
+      const childKeys = []
+      children.forEach(child => {
+        childKeys.push(this.getKey(child))
+        this.createNodes(child, childrenContainer)
+      })
+      node.setAttribute('data-children', childKeys.join())
     }
   }
 
-  createNodeElement(data) {
+  createNode(data) {
     const node = document.createElement('div')
     const key = this.getKey(data)
     node.classList.add('tree-chart-content', `tree-chart-item-${key}`)
@@ -191,49 +191,50 @@ class TreeChart {
   // 创建展开收起按钮
   createFoldButton(nodeElement) {
     if (nodeElement.querySelector('.tree-chart-unfold')) return
-    const foldButton = document.createElement('div')
-    foldButton.classList.add('tree-chart-unfold')
-    foldButton.innerHTML = '<div></div><div></div>'
-    nodeElement.appendChild(foldButton)
+    const button = document.createElement('div')
+    button.classList.add('tree-chart-unfold')
+    button.innerHTML = '<div></div><div></div>'
+    nodeElement.appendChild(button)
   }
 
   // 根据节点间父子关系生成连线信息
   createLink() {
-    const rootContainer = this.rootContainer
-    const chartElement = this.chartElement
-    if (this.linkContainer) {
+    const { container, nodesContainer, linkContainer } = this
+    // 创建容器
+    if (linkContainer) {
       this.linkContainer.innerHTML = ''
     } else {
-      const linkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-      this.linkContainer = linkContainer
-      linkContainer.classList.add('tree-chart-link-container')
-      rootContainer.appendChild(linkContainer)
+      const newLinkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      newLinkContainer.classList.add('tree-chart-link-container')
+      container.appendChild(newLinkContainer)
+      this.linkContainer = newLinkContainer
     }
 
-    const { left: offsetLeftValue, top: offsetTopValue } = rootContainer.getBoundingClientRect()
-    const { scrollLeft, scrollTop } = rootContainer
-    const nodeList = chartElement.querySelectorAll('.tree-chart-content')
+    const { left: offsetLeftValue, top: offsetTopValue } = container.getBoundingClientRect()
+    const { scrollLeft, scrollTop } = container
+    const nodeList = nodesContainer.querySelectorAll('.tree-chart-content')
 
     this.setPositionData('init')
+
     for (const item of nodeList) {
       const childrenKeys = item.getAttribute('data-children')
       const itemLayout = item.getBoundingClientRect()
-      const itemKey = this.getKey(item)
+      const nodeKey = this.getKey(item)
       const childrenNodeContainer = item.nextElementSibling
       // 忽略收起状态的节点
       if (childrenKeys && !childrenNodeContainer.classList.contains('is-hidden')) {
         const from = {
           x: itemLayout.left - offsetLeftValue + item.offsetWidth + scrollLeft,
           y: itemLayout.top - offsetTopValue + item.offsetHeight / 2 + scrollTop,
-          key: itemKey
+          key: nodeKey
         }
-        childrenKeys.split(',').forEach(childKey => {
-          const childrenElement = this.getNode(childKey)
+        childrenKeys.split(',').forEach(childNodeKey => {
+          const childrenElement = this.getNode(childNodeKey)
           const childrenLayout = childrenElement.getBoundingClientRect()
           const to = {
             x: childrenLayout.left - offsetLeftValue + scrollLeft,
             y: childrenLayout.top - offsetTopValue + childrenElement.offsetHeight / 2 + scrollTop,
-            key: childKey
+            key: childNodeKey
           }
           this.drawLine(from, to)
         })
@@ -243,10 +244,53 @@ class TreeChart {
         right: itemLayout.right - offsetLeftValue + scrollLeft,
         top: itemLayout.top - offsetTopValue + scrollTop,
         bottom: itemLayout.bottom - offsetTopValue + scrollTop,
-        key: itemKey
+        key: nodeKey
       })
     }
     this.draggable && this.setPositionData('sort')
+  }
+
+  // 生成节点位置信息，方便后面的碰撞检测
+  setPositionData(operation, data) {
+    if (operation === 'init') {
+      this.positionData = {
+        left: {
+          list: []
+        },
+        right: {
+          list: []
+        },
+        top: {
+          list: []
+        },
+        bottom: {
+          list: []
+        },
+        addData(data) {
+          const { key: nodeKey } = data
+          for (const direct in data) {
+            if (!/left|right|top|bottom/.test(direct)) continue
+            const positionValue = data[direct]
+            const directData = this[direct]
+            !directData.list.includes(positionValue) && directData.list.push(positionValue)
+            if (directData[positionValue]) {
+              directData[positionValue].push(nodeKey)
+            } else {
+              directData[positionValue] = [nodeKey]
+            }
+            this[nodeKey] = data
+          }
+        }
+      }
+    }
+    const positionData = this.positionData
+    if (operation === 'add') positionData.addData(data)
+    if (operation === 'sort') {
+      for (const key in positionData) {
+        if (!positionData[key].list) continue
+        positionData[key].list.sort((a, b) => a - b)
+      }
+    }
   }
 
   setEvent() {
@@ -258,7 +302,7 @@ class TreeChart {
   }
 
   setFoldEvent() {
-    this.chartElement.addEventListener('click', ({ target }) => {
+    this.nodesContainer.addEventListener('click', ({ target }) => {
       if (!target.classList.contains('tree-chart-unfold')) return
       this.toggleFold(target)
     })
@@ -297,7 +341,7 @@ class TreeChart {
   toggleFold(data, isFold) {
     let unfoldElement = null
     if (typeof data === 'string') {
-      unfoldElement = this.chartElement.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
+      unfoldElement = this.nodesContainer.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
     } else if (isElement(data)) {
       unfoldElement = data
     }
@@ -316,54 +360,9 @@ class TreeChart {
     }
   }
 
-  // 生成节点位置信息
-  setPositionData(operation, data) {
-    if (operation === 'init') {
-      this.positionData = {
-        left: {
-          list: []
-        },
-        right: {
-          list: []
-        },
-        top: {
-          list: []
-        },
-        bottom: {
-          list: []
-        },
-        addData(data) {
-          for (const keyName in data) {
-            const keyValue = data.key
-            if (data.hasOwnProperty(keyName) && /left|right|top|bottom/.test(keyName)) {
-              const currentValue = data[keyName]
-              const targetAttribute = this[keyName]
-              targetAttribute.list.indexOf(currentValue) === -1 && targetAttribute.list.push(currentValue)
-              if (targetAttribute[currentValue]) {
-                targetAttribute[currentValue].push(keyValue)
-              } else {
-                targetAttribute[currentValue] = [keyValue]
-              }
-              this[keyValue] = data
-            }
-          }
-        }
-      }
-    }
-    const positionData = this.positionData
-    if (operation === 'add') positionData.addData(data)
-    if (operation === 'sort') {
-      for (const key in positionData) {
-        if (positionData.hasOwnProperty(key) && positionData[key].list) {
-          positionData[key].list.sort((a, b) => a - b)
-        }
-      }
-    }
-  }
-
   reRender(data) {
-    this.chartElement.innerHTML = ''
-    this.createNodes(data, this.chartElement, false, true)
+    this.nodesContainer.innerHTML = ''
+    this.createNodes(data, this.nodesContainer, true)
     this.reloadLink()
   }
 
@@ -411,7 +410,7 @@ class TreeChart {
     }
 
     // 替换节点
-    const newNode = this.createNodeElement(data)
+    const newNode = this.createNode(data)
     childrenKeys && newNode.setAttribute('data-children', childrenKeys)
     node.querySelector('.tree-chart-unfold') && this.createFoldButton(newNode)
     parentElement.insertBefore(newNode, node)
@@ -425,7 +424,7 @@ class TreeChart {
   }
 
   getNode(key) {
-    return this.chartElement.querySelector(`.tree-chart-item-${key}`)
+    return this.nodesContainer.querySelector(`.tree-chart-item-${key}`)
   }
 
   getParentNode(target) {
@@ -484,7 +483,7 @@ class TreeChart {
 
     let originNode = null
     if (addNewNode) {
-      originNode = this.createNodeElement(origin)
+      originNode = this.createNode(origin)
     } else {
       originNode = isElement(origin) ? origin : this.getNode(origin)
     }
@@ -574,7 +573,7 @@ class TreeChart {
     if (target.classList.contains('tree-chart-unfold')) return null
     if (target.classList.contains('tree-chart-content')) return target
     let searchElement = target
-    while (this.chartElement !== searchElement) {
+    while (this.nodesContainer !== searchElement) {
       if (searchElement.classList.contains('tree-chart-content')) return searchElement
       searchElement = searchElement.parentElement
     }
@@ -591,14 +590,14 @@ class TreeChart {
   setClickHook() {
     const { click: clickHook } = this.hooks
     if (!clickHook) return
-    const chartElement = this.chartElement
+    const nodesContainer = this.nodesContainer
     // 用mouseEvent来实现click主要是为了区别dragStart和click的行为
     let mouseDownNode = null
-    chartElement.addEventListener('mousedown', ({ button, target }) => {
+    nodesContainer.addEventListener('mousedown', ({ button, target }) => {
       if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
       mouseDownNode = this.getCurrentEventNode(target)
     })
-    chartElement.addEventListener('mouseup', e => {
+    nodesContainer.addEventListener('mouseup', e => {
       const { button, target } = e
       if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
       const mouseUpNode = this.getCurrentEventNode(target)
@@ -628,13 +627,13 @@ class TreeChart {
   setDrag() {
     if (!this.draggable) return
     const hooks = this.hooks
-    const chartElement = this.chartElement
-    const rootContainer = this.rootContainer
+    const nodesContainer = this.nodesContainer
+    const container = this.container
 
     // 设置镜像层
     const ghostContainer = document.createElement('div')
     ghostContainer.classList.add('tree-chart-ghost-container')
-    rootContainer.appendChild(ghostContainer)
+    container.appendChild(ghostContainer)
 
     const dragData = this.dragData = {
       element: null,
@@ -649,7 +648,7 @@ class TreeChart {
 
     let dragstartLock = false
 
-    chartElement.addEventListener('mousedown', e => {
+    nodesContainer.addEventListener('mousedown', e => {
       if (e.button !== 0) return
       const dragNode = this.getCurrentEventNode(e.target)
       if (!dragNode) return
@@ -661,21 +660,21 @@ class TreeChart {
       dragData.element = dragNode
       dragData.ghostElement = dragNode.cloneNode(true)
       const { left, top } = this.positionData[this.getKey(dragNode)]
-      dragData.eventOffsetX = e.clientX + rootContainer.scrollLeft - left
-      dragData.eventOffsetY = e.clientY + rootContainer.scrollTop - top
+      dragData.eventOffsetX = e.clientX + container.scrollLeft - left
+      dragData.eventOffsetY = e.clientY + container.scrollTop - top
     })
-    chartElement.addEventListener('mousemove', e => {
+    nodesContainer.addEventListener('mousemove', e => {
       if (e.button !== 0) return
       if (dragData.element) {
         // 处理Chrome76版本长按不移动也会触发的情况
         if (e.movementX === 0 && e.movementY === 0) return
         // 清除文字选择对拖动的影响
         getSelection ? getSelection().removeAllRanges() : document.selection.empty()
-        chartElement.classList.add('cursor-move')
+        nodesContainer.classList.add('cursor-move')
         // 添加镜像元素
         !dragData.ghostContainer.contains(dragData.ghostElement) && dragData.ghostContainer.appendChild(dragData.ghostElement)
-        dragData.ghostTranslateX = e.clientX + rootContainer.scrollLeft - dragData.eventOffsetX
-        dragData.ghostTranslateY = e.clientY + rootContainer.scrollTop - dragData.eventOffsetY
+        dragData.ghostTranslateX = e.clientX + container.scrollLeft - dragData.eventOffsetX
+        dragData.ghostTranslateY = e.clientY + container.scrollTop - dragData.eventOffsetY
         dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
         const ghostPosition = this.getGhostPosition()
         this.setDragEffect(ghostPosition)
@@ -695,7 +694,7 @@ class TreeChart {
       nextKey: this.getNextKey(node),
       nextNode: this.getNextNode(node)
     })
-    chartElement.addEventListener('mouseup', e => {
+    nodesContainer.addEventListener('mouseup', e => {
       if (e.button !== 0) return
       dragstartLock = false
       const targetNode = document.querySelector('.collide-node')
@@ -723,7 +722,7 @@ class TreeChart {
 
     const cancelDrag = () => {
       if (!dragData.element) return
-      this.chartElement.classList.remove('cursor-move')
+      this.nodesContainer.classList.remove('cursor-move')
       dragData.element = null
       dragData.ghostContainer.innerHTML = ''
       dragData.ghostElement = null
@@ -739,18 +738,18 @@ class TreeChart {
 
     // 考虑滚动情况
     const oldScroll = {
-      top: rootContainer.scrollTop,
-      left: rootContainer.scrollLeft
+      top: container.scrollTop,
+      left: container.scrollLeft
     }
-    rootContainer.addEventListener('scroll', () => {
+    container.addEventListener('scroll', () => {
       if (dragData.element && dragData.ghostElement) {
-        dragData.ghostTranslateY = dragData.ghostTranslateY + rootContainer.scrollTop - oldScroll.top
-        dragData.ghostTranslateX = dragData.ghostTranslateX + rootContainer.scrollLeft - oldScroll.left
+        dragData.ghostTranslateY = dragData.ghostTranslateY + container.scrollTop - oldScroll.top
+        dragData.ghostTranslateX = dragData.ghostTranslateX + container.scrollLeft - oldScroll.left
         dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
         this.setDragEffect(this.getGhostPosition())
       }
-      oldScroll.top = rootContainer.scrollTop
-      oldScroll.left = rootContainer.scrollLeft
+      oldScroll.top = container.scrollTop
+      oldScroll.left = container.scrollLeft
     })
   }
 
@@ -1027,15 +1026,15 @@ class TreeChart {
 
   resize() {
     const option = this.option
-    const chartElement = this.chartElement
+    const nodesContainer = this.nodesContainer
 
-    chartElement.style.width = 'auto'
-    chartElement.style.minWidth = 'auto'
-    let { clientWidth: width, clientHeight: height } = chartElement
+    nodesContainer.style.width = 'auto'
+    nodesContainer.style.minWidth = 'auto'
+    let { clientWidth: width, clientHeight: height } = nodesContainer
     width = `${this.draggable ? width + option.extendSpace : width}px`
     height = `${height}px`
-    chartElement.style.width = width
-    chartElement.style.minWidth = '100%'
+    nodesContainer.style.width = width
+    nodesContainer.style.minWidth = '100%'
 
     const linkContainer = this.linkContainer
     linkContainer.setAttribute('width', width)
@@ -1050,8 +1049,8 @@ class TreeChart {
 
   followScroll({ left, top, right, bottom }) {
     if (!this.dragScroll) return
-    const rootContainer = this.rootContainer
-    const { scrollLeft, scrollTop, clientWidth, clientHeight, scrollWidth, scrollHeight } = rootContainer
+    const container = this.container
+    const { scrollLeft, scrollTop, clientWidth, clientHeight, scrollWidth, scrollHeight } = container
     const distance = this.option.scrollTriggerDistance
     let direct = ''
     const hasRightContent = scrollWidth - scrollLeft > clientWidth
@@ -1073,12 +1072,12 @@ class TreeChart {
       const scrollSpeed = this.option.scrollSpeed
       this.foolowScrollData.interval = setInterval(() => {
         if (direct === 'Left' || direct === 'Top') {
-          rootContainer[`scroll${direct}`] -= scrollSpeed
+          container[`scroll${direct}`] -= scrollSpeed
         } else {
           if (direct === 'Right') {
-            rootContainer.scrollLeft += scrollSpeed
+            container.scrollLeft += scrollSpeed
           } else {
-            rootContainer.scrollTop += scrollSpeed
+            container.scrollTop += scrollSpeed
           }
         }
         let stop = false
@@ -1112,29 +1111,29 @@ class TreeChart {
       interval: null,
       direct: ''
     }
-    const rootContainer = this.rootContainer
-    const chartElement = this.chartElement
+    const container = this.container
+    const nodesContainer = this.nodesContainer
     let lock = true
 
     const getEventNode = target => {
       if (target.classList.contains('tree-chart-content')) return target
       let searchElement = target
-      while (this.chartElement !== searchElement) {
+      while (this.nodesContainer !== searchElement) {
         if (searchElement.classList.contains('tree-chart-content')) return searchElement
         searchElement = searchElement.parentElement
       }
       return null
     }
 
-    chartElement.addEventListener('mousedown', e => {
+    nodesContainer.addEventListener('mousedown', e => {
       if (e.button !== 0 || getEventNode(e.target)) return
       lock = false
     })
-    chartElement.addEventListener('mousemove', e => {
+    nodesContainer.addEventListener('mousemove', e => {
       e.preventDefault()
       if (e.button !== 0 || lock) return
-      rootContainer.scrollLeft = rootContainer.scrollLeft - e.movementX
-      rootContainer.scrollTop = rootContainer.scrollTop - e.movementY
+      container.scrollLeft = container.scrollLeft - e.movementX
+      container.scrollTop = container.scrollTop - e.movementY
     })
     this.cancelDragScroll = e => {
       if (e.button !== 0) return

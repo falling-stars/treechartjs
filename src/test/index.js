@@ -90,11 +90,12 @@ const chart = new TreeChart({
   }
 })
 
-// setTimeout(() => {
-//   chart.reRenderNode('122', { name: 99999, id: 9999 })
-//   chart.removeNode('13')
-//   chart.insertNode('111', '141', 'child')
-//   setTimeout(() => {
-//     chart.removeNode('111')
-//   })
-// }, 1000)
+document.querySelector('.re-render').addEventListener('click', () => {
+  chart.reRenderNode('122', { name: 999, id: 999 })
+})
+document.querySelector('.remove-node').addEventListener('click', () => {
+  chart.removeNode('11')
+})
+document.querySelector('.move-node').addEventListener('click', () => {
+  chart.insertNode('12', '111', 'child')
+})
