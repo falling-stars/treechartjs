@@ -251,41 +251,34 @@ class TreeChart {
   // 生成节点位置信息，方便后面的碰撞检测
   initPositionData() {
     this.positionData = {
-      left: {
-        list: []
-      },
-      right: {
-        list: []
-      },
-      top: {
-        list: []
-      },
-      bottom: {
-        list: []
-      }
+      left: { sortList: [] },
+      right: { sortList: [] },
+      top: { sortList: [] },
+      bottom: { sortList: [] },
+      nodeMap: {}
     }
   }
 
-  addPositionData(nodeKey, data) {
+  addPositionData(nodeKey, positionDataItem) {
     const { positionData } = this
-    for (const direct in data) {
-      const positionValue = data[direct]
-      const directData = positionData[direct]
-      !directData.list.includes(positionValue) && directData.list.push(positionValue)
-      if (directData[positionValue]) {
-        directData[positionValue].push(nodeKey)
+    positionData.nodeMap[nodeKey] = positionDataItem
+    for (const direct in positionDataItem) {
+      const position = positionDataItem[direct]
+      const directPositionMap = positionData[direct]
+      directPositionMap.sortList.push(position)
+      if (directPositionMap[position]) {
+        directPositionMap[position].push(nodeKey)
       } else {
-        directData[positionValue] = [nodeKey]
+        directPositionMap[position] = [nodeKey]
       }
-      positionData[nodeKey] = data
     }
   }
 
   sortPositionData() {
     const { positionData } = this
     for (const key in positionData) {
-      if (!positionData[key].list) continue
-      positionData[key].list.sort((a, b) => a - b)
+      if (!positionData[key].sortList) continue
+      positionData[key].sortList.sort((a, b) => a - b)
     }
   }
 
@@ -363,44 +356,45 @@ class TreeChart {
   }
 
   reRenderNode(key, data) {
-    const oldKey = key.toString()
-    const newKey = this.getKey(data)
-    const node = this.getNode(oldKey)
+    const oldNodeKey = key.toString()
+    const newNodeKey = this.getKey(data)
+    const node = this.getNode(oldNodeKey)
     const parentElement = node.parentElement
     const childrenKeys = node.getAttribute('data-children')
 
-    if (newKey !== oldKey) {
+    if (newNodeKey !== oldNodeKey) {
+      const { positionData, linkContainer } = this
       // 替换父节点的children-key
       const parentNode = this.getParentNode(node)
       const parentChildrenKey = parentNode.getAttribute('data-children')
-      const regExp = new RegExp(oldKey)
-      parentNode.setAttribute('data-children', parentChildrenKey.replace(regExp, newKey))
+      parentNode.setAttribute('data-children', parentChildrenKey.replace(oldNodeKey, newNodeKey))
       // 替换连线的类名
-      const parentKey = this.getParentKey(oldKey)
-      const parentLineClassName = `line-${parentKey}-${oldKey}`
-      const parentLink = this.linkContainer.querySelector(`.${parentLineClassName}`)
-      parentLink.classList.add(`line-${parentKey}-${newKey}`)
+      const parentKey = this.getParentKey(oldNodeKey)
+      const parentLineClassName = `line-${parentKey}-${oldNodeKey}`
+      const parentLink = linkContainer.querySelector(`.${parentLineClassName}`)
+      parentLink.classList.add(`line-${parentKey}-${newNodeKey}`)
       parentLink.classList.remove(parentLineClassName)
       if (childrenKeys) {
         childrenKeys.split(',').forEach(childKey => {
-          const childLineClassName = `line-${oldKey}-${childKey}`
+          const childLineClassName = `line-${oldNodeKey}-${childKey}`
           const childLink = this.linkContainer.querySelector(`.${childLineClassName}`)
-          childLink.classList.add(`line-${newKey}-${childKey}`)
+          childLink.classList.add(`line-${newNodeKey}-${childKey}`)
           childLink.classList.remove(childLineClassName)
         })
       }
-      // 替换position数据
-      const positionData = this.positionData
-      positionData[newKey] = positionData[oldKey]
-      positionData[newKey].key = newKey
-      delete positionData[oldKey]
-      const fieldNames = ['left', 'top', 'right', 'bottom']
-      fieldNames.forEach(fieldName => {
-        const redirectData = positionData[fieldName]
-        for (const redirectKey in redirectData) {
-          const redirectItem = redirectData[redirectKey]
-          const oldKeyIndex = redirectItem.indexOf(oldKey)
-          oldKeyIndex > -1 && redirectItem.splice(oldKeyIndex, 1, newKey)
+      // 更新position数据
+      positionData.nodeMap[newNodeKey] = positionData.nodeMap[oldNodeKey]
+      delete positionData.nodeMap[oldNodeKey]
+      void ['left', 'top', 'right', 'bottom'].forEach(direct => {
+        const directPositionMap = positionData[direct]
+        for (const position in directPositionMap) {
+          if (position === 'sortList') continue
+          const nodeKeyList = directPositionMap[position]
+          const oldKeyIndex = nodeKeyList.indexOf(oldNodeKey)
+          if (oldKeyIndex > -1) {
+            nodeKeyList.splice(oldKeyIndex, 1, newNodeKey)
+            break
+          }
         }
       })
     }
@@ -655,7 +649,7 @@ class TreeChart {
       if (hooks.preventDrag && hooks.preventDrag(e, { key: this.getKey(dragNode), element: dragNode })) return
       dragData.element = dragNode
       dragData.ghostElement = dragNode.cloneNode(true)
-      const { left, top } = this.positionData[this.getKey(dragNode)]
+      const { left, top } = this.positionData.nodeMap[this.getKey(dragNode)]
       dragData.eventOffsetX = e.clientX + container.scrollLeft - left
       dragData.eventOffsetY = e.clientY + container.scrollTop - top
     })
@@ -781,7 +775,12 @@ class TreeChart {
     if (dragElement.parentElement.contains(coverNode)) return setNotAllowEffect(coverNode)
 
     const coverNodeKey = this.getKey(coverNode)
-    const { top: coverNodeTop, bottom: coverNodeBottom, left: coverNodeLeft, right: coverNodeRight } = this.positionData[coverNodeKey]
+    const {
+      top: coverNodeTop,
+      bottom: coverNodeBottom,
+      left: coverNodeLeft,
+      right: coverNodeRight
+    } = this.positionData.nodeMap[coverNodeKey]
 
     // 拖到父节点时只能作为兄弟节点插入
     const coverIsParent = coverNode === this.getParentNode(dragElement)
@@ -842,12 +841,12 @@ class TreeChart {
     coverNode.classList.add(`become-${insertType}`, 'collide-node')
 
     if (insertType === 'previous' || insertType === 'next') {
-      const parentKey = this.getKey(this.getParentNode(coverNode))
-      const parentPosition = this.positionData[parentKey]
+      const parentNodeKey = this.getKey(this.getParentNode(coverNode))
+      const parentPosition = this.positionData.nodeMap[parentNodeKey]
       from = {
         x: parentPosition.right,
         y: (parentPosition.top + parentPosition.bottom) / 2,
-        key: parentKey
+        key: parentNodeKey
       }
       to = {
         x: coverNodeLeft,
@@ -891,7 +890,7 @@ class TreeChart {
         } else {
           const childNodeList = coverNode.nextElementSibling.childNodes
           const insertPreviousKey = this.getKey(childNodeList[childNodeList.length - 1].querySelector('.tree-chart-content'))
-          const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData[insertPreviousKey]
+          const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData.nodeMap[insertPreviousKey]
           to = {
             x: childPreviousLeft,
             y: childPreviousBottom + 20,
@@ -928,7 +927,7 @@ class TreeChart {
 
     const getRangeList = (flagItem, data, direct = 'after') => {
       let result = []
-      isNumber(flagItem) && data.list.forEach(item => {
+      isNumber(flagItem) && data.sortList.forEach(item => {
         if (direct === 'before' ? item <= flagItem : item >= flagItem) {
           result = result.concat(data[item])
         }
@@ -936,10 +935,10 @@ class TreeChart {
       return result
     }
 
-    const leftList = positionData.left.list
-    const topList = positionData.top.list
-    const rightList = positionData.right.list
-    const bottomList = positionData.bottom.list
+    const leftList = positionData.left.sortList
+    const topList = positionData.top.sortList
+    const rightList = positionData.right.sortList
+    const bottomList = positionData.bottom.sortList
 
     // 寻找边界内的坐标
     const searchLeft = searchCurrent(left, rightList, true)
@@ -970,10 +969,10 @@ class TreeChart {
 
     // 两个区间求交集确定目标元素
     const collideNode = []
-    leftTopCollide.forEach(item => {
-      if (!rightBottomCollide.includes(item)) return
-      const node = this.getNode(item)
-      collideNode.push({ node, key: item, position: this.positionData[item] })
+    leftTopCollide.forEach(nodeKey => {
+      if (!rightBottomCollide.includes(nodeKey)) return
+      const node = this.getNode(nodeKey)
+      collideNode.push({ node, key: nodeKey, position: this.positionData.nodeMap[nodeKey] })
     })
 
     if (!collideNode.length) return null
