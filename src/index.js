@@ -197,9 +197,9 @@ class TreeChart {
     nodeElement.appendChild(button)
   }
 
-  // 根据节点间父子关系生成连线信息
+  // 根据节点间父子关系生成连线信息，同时生成节点位置数据
   createLink() {
-    const { container, nodesContainer, linkContainer } = this
+    const { container, nodesContainer, linkContainer, draggable } = this
     // 创建容器
     if (linkContainer) {
       this.linkContainer.innerHTML = ''
@@ -214,8 +214,7 @@ class TreeChart {
     const { scrollLeft, scrollTop } = container
     const nodeList = nodesContainer.querySelectorAll('.tree-chart-content')
 
-    this.setPositionData('init')
-
+    draggable && this.initPositionData()
     for (const item of nodeList) {
       const childrenKeys = item.getAttribute('data-children')
       const itemLayout = item.getBoundingClientRect()
@@ -239,57 +238,54 @@ class TreeChart {
           this.drawLine(from, to)
         })
       }
-      this.draggable && this.setPositionData('add', {
+      draggable && this.addPositionData(nodeKey, {
         left: itemLayout.left - offsetLeftValue + scrollLeft,
         right: itemLayout.right - offsetLeftValue + scrollLeft,
         top: itemLayout.top - offsetTopValue + scrollTop,
-        bottom: itemLayout.bottom - offsetTopValue + scrollTop,
-        key: nodeKey
+        bottom: itemLayout.bottom - offsetTopValue + scrollTop
       })
     }
-    this.draggable && this.setPositionData('sort')
+    draggable && this.sortPositionData()
   }
 
   // 生成节点位置信息，方便后面的碰撞检测
-  setPositionData(operation, data) {
-    if (operation === 'init') {
-      this.positionData = {
-        left: {
-          list: []
-        },
-        right: {
-          list: []
-        },
-        top: {
-          list: []
-        },
-        bottom: {
-          list: []
-        },
-        addData(data) {
-          const { key: nodeKey } = data
-          for (const direct in data) {
-            if (!/left|right|top|bottom/.test(direct)) continue
-            const positionValue = data[direct]
-            const directData = this[direct]
-            !directData.list.includes(positionValue) && directData.list.push(positionValue)
-            if (directData[positionValue]) {
-              directData[positionValue].push(nodeKey)
-            } else {
-              directData[positionValue] = [nodeKey]
-            }
-            this[nodeKey] = data
-          }
-        }
+  initPositionData() {
+    this.positionData = {
+      left: {
+        list: []
+      },
+      right: {
+        list: []
+      },
+      top: {
+        list: []
+      },
+      bottom: {
+        list: []
       }
     }
-    const positionData = this.positionData
-    if (operation === 'add') positionData.addData(data)
-    if (operation === 'sort') {
-      for (const key in positionData) {
-        if (!positionData[key].list) continue
-        positionData[key].list.sort((a, b) => a - b)
+  }
+
+  addPositionData(nodeKey, data) {
+    const { positionData } = this
+    for (const direct in data) {
+      const positionValue = data[direct]
+      const directData = positionData[direct]
+      !directData.list.includes(positionValue) && directData.list.push(positionValue)
+      if (directData[positionValue]) {
+        directData[positionValue].push(nodeKey)
+      } else {
+        directData[positionValue] = [nodeKey]
       }
+      positionData[nodeKey] = data
+    }
+  }
+
+  sortPositionData() {
+    const { positionData } = this
+    for (const key in positionData) {
+      if (!positionData[key].list) continue
+      positionData[key].list.sort((a, b) => a - b)
     }
   }
 
@@ -913,7 +909,8 @@ class TreeChart {
 
   // 获取拖动过程中碰撞的元素
   getCollideNode({ left, right, top, bottom }) {
-    const draggingElementKey = this.getKey(this.dragData.element)
+    const { dragData, positionData } = this
+    const draggingElementKey = this.getKey(dragData.element)
     // Find current collide contentElement position
     const searchCurrent = (target, list, searchLarge) => {
       const listLen = list.length
@@ -939,7 +936,6 @@ class TreeChart {
       return result
     }
 
-    const positionData = this.positionData
     const leftList = positionData.left.list
     const topList = positionData.top.list
     const rightList = positionData.right.list
