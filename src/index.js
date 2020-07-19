@@ -113,7 +113,7 @@ class TreeChart {
     !reRender && parentNodeContainer.appendChild(nodeContainer)
 
     // 初始化时候
-    if (!this.nodesContainer) {
+    if (!this.nodeContainer) {
       nodeContainer.classList.add('is-node-container')
       const { padding } = this.option
       for (const key in padding) {
@@ -125,7 +125,7 @@ class TreeChart {
         }
       }
       this.rootNode = node
-      this.nodesContainer = nodeContainer
+      this.nodeContainer = nodeContainer
     }
 
     if (existChildren) {
@@ -199,7 +199,7 @@ class TreeChart {
 
   // 根据节点间父子关系生成连线信息，同时生成节点位置数据
   createLink() {
-    const { container, nodesContainer, linkContainer, draggable } = this
+    const { container, nodeContainer, linkContainer, draggable } = this
     // 创建容器
     if (linkContainer) {
       this.linkContainer.innerHTML = ''
@@ -210,41 +210,40 @@ class TreeChart {
       this.linkContainer = newLinkContainer
     }
 
-    const { left: offsetLeftValue, top: offsetTopValue } = container.getBoundingClientRect()
+    const { left: containerLeft, top: containerTop } = container.getBoundingClientRect()
     const { scrollLeft, scrollTop } = container
-    const nodeList = nodesContainer.querySelectorAll('.tree-chart-content')
-
     draggable && this.initPositionData()
-    for (const item of nodeList) {
-      const childrenKeys = item.getAttribute('data-children')
-      const itemLayout = item.getBoundingClientRect()
-      const nodeKey = this.getKey(item)
-      const childrenNodeContainer = item.nextElementSibling
+
+    nodeContainer.querySelectorAll('.tree-chart-content').forEach(nodeElement => {
+      const childrenKeys = nodeElement.getAttribute('data-children')
+      const { left: nodeLeft, right: nodeRight, top: nodeTop, bottom: nodeBottom } = nodeElement.getBoundingClientRect()
+      const nodeKey = this.getKey(nodeElement)
+      const childrenNodeContainer = nodeElement.nextElementSibling
       // 忽略收起状态的节点
       if (childrenKeys && !childrenNodeContainer.classList.contains('is-hidden')) {
         const from = {
-          x: itemLayout.left - offsetLeftValue + item.offsetWidth + scrollLeft,
-          y: itemLayout.top - offsetTopValue + item.offsetHeight / 2 + scrollTop,
+          x: nodeLeft - containerLeft + nodeElement.offsetWidth + scrollLeft,
+          y: nodeTop - containerTop + nodeElement.offsetHeight / 2 + scrollTop,
           key: nodeKey
         }
         childrenKeys.split(',').forEach(childNodeKey => {
           const childrenElement = this.getNode(childNodeKey)
           const childrenLayout = childrenElement.getBoundingClientRect()
           const to = {
-            x: childrenLayout.left - offsetLeftValue + scrollLeft,
-            y: childrenLayout.top - offsetTopValue + childrenElement.offsetHeight / 2 + scrollTop,
+            x: childrenLayout.left - containerLeft + scrollLeft,
+            y: childrenLayout.top - containerTop + childrenElement.offsetHeight / 2 + scrollTop,
             key: childNodeKey
           }
           this.drawLine(from, to)
         })
       }
       draggable && this.addPositionData(nodeKey, {
-        left: itemLayout.left - offsetLeftValue + scrollLeft,
-        right: itemLayout.right - offsetLeftValue + scrollLeft,
-        top: itemLayout.top - offsetTopValue + scrollTop,
-        bottom: itemLayout.bottom - offsetTopValue + scrollTop
+        left: nodeLeft - containerLeft + scrollLeft,
+        right: nodeRight - containerLeft + scrollLeft,
+        top: nodeTop - containerTop + scrollTop,
+        bottom: nodeBottom - containerTop + scrollTop
       })
-    }
+    })
     draggable && this.sortPositionData()
   }
 
@@ -255,13 +254,13 @@ class TreeChart {
       right: { sortList: [] },
       top: { sortList: [] },
       bottom: { sortList: [] },
-      nodeMap: {}
+      node: {}
     }
   }
 
   addPositionData(nodeKey, positionDataItem) {
     const { positionData } = this
-    positionData.nodeMap[nodeKey] = positionDataItem
+    positionData.node[nodeKey] = positionDataItem
     for (const direct in positionDataItem) {
       const position = positionDataItem[direct]
       const directPositionMap = positionData[direct]
@@ -291,7 +290,7 @@ class TreeChart {
   }
 
   setFoldEvent() {
-    this.nodesContainer.addEventListener('click', ({ target }) => {
+    this.nodeContainer.addEventListener('click', ({ target }) => {
       if (!target.classList.contains('tree-chart-unfold')) return
       this.toggleFold(target)
     })
@@ -330,7 +329,7 @@ class TreeChart {
   toggleFold(data, isFold) {
     let unfoldElement = null
     if (typeof data === 'string') {
-      unfoldElement = this.nodesContainer.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
+      unfoldElement = this.nodeContainer.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
     } else if (isElement(data)) {
       unfoldElement = data
     }
@@ -350,8 +349,8 @@ class TreeChart {
   }
 
   reRender(data) {
-    this.nodesContainer.innerHTML = ''
-    this.createNodes(data, this.nodesContainer, true)
+    this.nodeContainer.innerHTML = ''
+    this.createNodes(data, this.nodeContainer, true)
     this.reloadLink()
   }
 
@@ -383,8 +382,8 @@ class TreeChart {
         })
       }
       // 更新position数据
-      positionData.nodeMap[newNodeKey] = positionData.nodeMap[oldNodeKey]
-      delete positionData.nodeMap[oldNodeKey]
+      positionData.node[newNodeKey] = positionData.node[oldNodeKey]
+      delete positionData.node[oldNodeKey]
       void ['left', 'top', 'right', 'bottom'].forEach(direct => {
         const directPositionMap = positionData[direct]
         for (const position in directPositionMap) {
@@ -414,7 +413,7 @@ class TreeChart {
   }
 
   getNode(key) {
-    return this.nodesContainer.querySelector(`.tree-chart-item-${key}`)
+    return this.nodeContainer.querySelector(`.tree-chart-item-${key}`)
   }
 
   getParentNode(target) {
@@ -563,7 +562,7 @@ class TreeChart {
     if (target.classList.contains('tree-chart-unfold')) return null
     if (target.classList.contains('tree-chart-content')) return target
     let searchElement = target
-    while (this.nodesContainer !== searchElement) {
+    while (this.nodeContainer !== searchElement) {
       if (searchElement.classList.contains('tree-chart-content')) return searchElement
       searchElement = searchElement.parentElement
     }
@@ -580,14 +579,14 @@ class TreeChart {
   setClickHook() {
     const { click: clickHook } = this.hooks
     if (!clickHook) return
-    const nodesContainer = this.nodesContainer
+    const nodeContainer = this.nodeContainer
     // 用mouseEvent来实现click主要是为了区别dragStart和click的行为
     let mouseDownNode = null
-    nodesContainer.addEventListener('mousedown', ({ button, target }) => {
+    nodeContainer.addEventListener('mousedown', ({ button, target }) => {
       if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
       mouseDownNode = this.getCurrentEventNode(target)
     })
-    nodesContainer.addEventListener('mouseup', e => {
+    nodeContainer.addEventListener('mouseup', e => {
       const { button, target } = e
       if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
       const mouseUpNode = this.getCurrentEventNode(target)
@@ -617,7 +616,7 @@ class TreeChart {
   setDrag() {
     if (!this.draggable) return
     const hooks = this.hooks
-    const nodesContainer = this.nodesContainer
+    const nodeContainer = this.nodeContainer
     const container = this.container
 
     // 设置镜像层
@@ -638,7 +637,7 @@ class TreeChart {
 
     let dragstartLock = false
 
-    nodesContainer.addEventListener('mousedown', e => {
+    nodeContainer.addEventListener('mousedown', e => {
       if (e.button !== 0) return
       const dragNode = this.getCurrentEventNode(e.target)
       if (!dragNode) return
@@ -649,18 +648,18 @@ class TreeChart {
       if (hooks.preventDrag && hooks.preventDrag(e, { key: this.getKey(dragNode), element: dragNode })) return
       dragData.element = dragNode
       dragData.ghostElement = dragNode.cloneNode(true)
-      const { left, top } = this.positionData.nodeMap[this.getKey(dragNode)]
+      const { left, top } = this.positionData.node[this.getKey(dragNode)]
       dragData.eventOffsetX = e.clientX + container.scrollLeft - left
       dragData.eventOffsetY = e.clientY + container.scrollTop - top
     })
-    nodesContainer.addEventListener('mousemove', e => {
+    nodeContainer.addEventListener('mousemove', e => {
       if (e.button !== 0) return
       if (dragData.element) {
         // 处理Chrome76版本长按不移动也会触发的情况
         if (e.movementX === 0 && e.movementY === 0) return
         // 清除文字选择对拖动的影响
         getSelection ? getSelection().removeAllRanges() : document.selection.empty()
-        nodesContainer.classList.add('cursor-move')
+        nodeContainer.classList.add('cursor-move')
         // 添加镜像元素
         !dragData.ghostContainer.contains(dragData.ghostElement) && dragData.ghostContainer.appendChild(dragData.ghostElement)
         dragData.ghostTranslateX = e.clientX + container.scrollLeft - dragData.eventOffsetX
@@ -684,7 +683,7 @@ class TreeChart {
       nextKey: this.getNextKey(node),
       nextNode: this.getNextNode(node)
     })
-    nodesContainer.addEventListener('mouseup', e => {
+    nodeContainer.addEventListener('mouseup', e => {
       if (e.button !== 0) return
       dragstartLock = false
       const targetNode = document.querySelector('.collide-node')
@@ -712,7 +711,7 @@ class TreeChart {
 
     const cancelDrag = () => {
       if (!dragData.element) return
-      this.nodesContainer.classList.remove('cursor-move')
+      this.nodeContainer.classList.remove('cursor-move')
       dragData.element = null
       dragData.ghostContainer.innerHTML = ''
       dragData.ghostElement = null
@@ -780,7 +779,7 @@ class TreeChart {
       bottom: coverNodeBottom,
       left: coverNodeLeft,
       right: coverNodeRight
-    } = this.positionData.nodeMap[coverNodeKey]
+    } = this.positionData.node[coverNodeKey]
 
     // 拖到父节点时只能作为兄弟节点插入
     const coverIsParent = coverNode === this.getParentNode(dragElement)
@@ -842,7 +841,7 @@ class TreeChart {
 
     if (insertType === 'previous' || insertType === 'next') {
       const parentNodeKey = this.getKey(this.getParentNode(coverNode))
-      const parentPosition = this.positionData.nodeMap[parentNodeKey]
+      const parentPosition = this.positionData.node[parentNodeKey]
       from = {
         x: parentPosition.right,
         y: (parentPosition.top + parentPosition.bottom) / 2,
@@ -890,7 +889,7 @@ class TreeChart {
         } else {
           const childNodeList = coverNode.nextElementSibling.childNodes
           const insertPreviousKey = this.getKey(childNodeList[childNodeList.length - 1].querySelector('.tree-chart-content'))
-          const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData.nodeMap[insertPreviousKey]
+          const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData.node[insertPreviousKey]
           to = {
             x: childPreviousLeft,
             y: childPreviousBottom + 20,
@@ -972,7 +971,7 @@ class TreeChart {
     leftTopCollide.forEach(nodeKey => {
       if (!rightBottomCollide.includes(nodeKey)) return
       const node = this.getNode(nodeKey)
-      collideNode.push({ node, key: nodeKey, position: this.positionData.nodeMap[nodeKey] })
+      collideNode.push({ node, key: nodeKey, position: this.positionData.node[nodeKey] })
     })
 
     if (!collideNode.length) return null
@@ -1021,15 +1020,15 @@ class TreeChart {
 
   resize() {
     const option = this.option
-    const nodesContainer = this.nodesContainer
+    const nodeContainer = this.nodeContainer
 
-    nodesContainer.style.width = 'auto'
-    nodesContainer.style.minWidth = 'auto'
-    let { clientWidth: width, clientHeight: height } = nodesContainer
+    nodeContainer.style.width = 'auto'
+    nodeContainer.style.minWidth = 'auto'
+    let { clientWidth: width, clientHeight: height } = nodeContainer
     width = `${this.draggable ? width + option.extendSpace : width}px`
     height = `${height}px`
-    nodesContainer.style.width = width
-    nodesContainer.style.minWidth = '100%'
+    nodeContainer.style.width = width
+    nodeContainer.style.minWidth = '100%'
 
     const linkContainer = this.linkContainer
     linkContainer.setAttribute('width', width)
@@ -1107,24 +1106,24 @@ class TreeChart {
       direct: ''
     }
     const container = this.container
-    const nodesContainer = this.nodesContainer
+    const nodeContainer = this.nodeContainer
     let lock = true
 
     const getEventNode = target => {
       if (target.classList.contains('tree-chart-content')) return target
       let searchElement = target
-      while (this.nodesContainer !== searchElement) {
+      while (this.nodeContainer !== searchElement) {
         if (searchElement.classList.contains('tree-chart-content')) return searchElement
         searchElement = searchElement.parentElement
       }
       return null
     }
 
-    nodesContainer.addEventListener('mousedown', e => {
+    nodeContainer.addEventListener('mousedown', e => {
       if (e.button !== 0 || getEventNode(e.target)) return
       lock = false
     })
-    nodesContainer.addEventListener('mousemove', e => {
+    nodeContainer.addEventListener('mousemove', e => {
       e.preventDefault()
       if (e.button !== 0 || lock) return
       container.scrollLeft = container.scrollLeft - e.movementX
