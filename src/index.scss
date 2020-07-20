@@ -31,7 +31,7 @@
       margin-bottom: 0 !important;
     }
   }
-  .tree-chart-content {
+  .tree-chart-node {
     position: relative;
     display: inline-block;
     vertical-align: middle;
@@ -68,7 +68,7 @@
     box-shadow: 0 0 2px 2px #ff9a36;
     & + .tree-chart-children-container {
       & > .tree-chart-container:last-child {
-        & > .tree-chart-content {
+        & > .tree-chart-node {
           &:after {
             position: absolute;
             left: 0;
@@ -113,7 +113,7 @@
     }
   }
   .temp-children-container {
-    .tree-chart-content {
+    .tree-chart-node {
       &:after {
         position: absolute;
         left: 0;
@@ -153,7 +153,7 @@
     min-height: 100%;
     z-index: 3;
     pointer-events: none;
-    .tree-chart-content {
+    .tree-chart-node {
       opacity: 0.7;
     }
     .tree-chart-unfold {
