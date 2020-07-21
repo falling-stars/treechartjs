@@ -10,12 +10,34 @@
             height: 100vh;
             overflow: hidden;
         }
+        .button-container {
+            padding-top: 10px;
+        }
+        button {
+            cursor: pointer;
+            outline: none;
+            border: none;
+            color: white;
+            background-color: #909399;
+            padding: 5px 12px;
+            margin-right: 10px;
+            border-radius: 2px;
+        }
+        button:hover {
+            color: white;
+            background-color: #409eff;
+        }
     </style>
 </head>
 <body>
-<button class="re-render">reRender 122 to 9999</button>
-<button class="remove-node">remove node of 11</button>
-<button class="move-node">move node of 111 become 12 child</button>
+<div class="button-container">
+    <button class="re-render">reRender 122 to 9999</button>
+    <button class="remove-node">remove node of 11</button>
+    <button class="move-node">move node of 111 become 12 child</button>
+    <button class="insert-child">insert node of insertChild become 12 child</button>
+    <button class="insert-previous">insert node of insertPrevious become 12 previous</button>
+    <button class="insert-next">insert node of insertNext become 12 next</button>
+</div>
 <div id="demo"></div>
 </body>
 </html>

@@ -99,3 +99,12 @@ document.querySelector('.remove-node').addEventListener('click', () => {
 document.querySelector('.move-node').addEventListener('click', () => {
   chart.insertNode('12', '111', 'child')
 })
+document.querySelector('.insert-child').addEventListener('click', () => {
+  chart.insertNode('12', { name: 'insertChild', id: 'insertChild' }, 'child')
+})
+document.querySelector('.insert-previous').addEventListener('click', () => {
+  chart.insertNode('12', { name: 'insertPrevious', id: 'insertPrevious' }, 'previous')
+})
+document.querySelector('.insert-next').addEventListener('click', () => {
+  chart.insertNode('12', { name: 'insertNext', id: 'insertNext' }, 'next')
+})
