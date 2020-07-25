@@ -3,25 +3,10 @@ import './index.scss'
 const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
 const isNumber = data => /Number/.test(Object.prototype.toString.call(data))
 const childrenIsFold = node => Boolean(node.querySelector('.can-unfold'))
-const hasChildren = node => Boolean(node.getAttribute('data-children'))
-const removeUnfoldElement = node => {
-  const unfoldElement = node.querySelector('.tree-chart-unfold')
-  unfoldElement && node.removeChild(unfoldElement)
-}
-const getChildrenContainer = node => node.nextElementSibling
-const removeChildrenContainer = node => {
-  const childrenContainer = getChildrenContainer(node)
-  childrenContainer.parentElement.removeChild(childrenContainer)
-}
 const setNotAllowEffect = node => node.classList.add('show-not-allow')
 
 class TreeChart {
   /* API */
-  getKey(target) {
-    if (target === null) return null
-    return isElement(target) ? target.getAttribute('data-key') : target[this.option.keyField].toString()
-  }
-
   getKeyByElement(nodeElement) {
     if (!isElement(nodeElement)) return null
     return nodeElement.classList.contains('tree-chart-node') ? nodeElement.getAttribute('data-key') : null
@@ -41,8 +26,10 @@ class TreeChart {
     return childrenKeys.split(',')
   }
 
-  hasChildrenNode(key) {
-    return this.getNodeElement(key)
+  existChildren(key) {
+    const nodeElement = this.getNodeElement(key)
+    if (!nodeElement) return false
+    return Boolean(nodeElement.getAttribute('data-children'))
   }
 
   insertNode(targetKey, origin, type, unReloadLink) {
@@ -50,15 +37,15 @@ class TreeChart {
     // 限制不能给根节点添加兄弟元素
     if (/next|previous/.test(type) && targetNode === this.rootNode) return
     const targetNodeContainer = targetNode.parentElement
-    const targetParentNode = this.getParentNode(targetKey)
 
+    // 处理origin部分
     // 是否需要新建节点
     const needCreateNode = /Object/.test(Object.prototype.toString.call(origin))
     let originKey = null
     let originNode = null
     let originNodeContainer = null
-
     if (needCreateNode) {
+      originKey = this.getKeyField(origin)
       originNode = this.createNode(origin)
       originNodeContainer = this.createNodeContainer()
       originNodeContainer.appendChild(originNode)
@@ -67,46 +54,60 @@ class TreeChart {
       originKey = origin
       originNode = this.getNodeElement(originKey)
       originNodeContainer = originNode.parentElement
-      const originParentNode = this.getParentNode(originKey)
-      // 删除原先的节点的data-children
-      this.removeChildrenKey(this.getKeyByElement(originParentNode), originKey)
+      // 修改原先节点父节点的data-children属性
+      const originParentKey = this.getParentKey(originKey)
+      this.removeChildrenKey(originParentKey, originKey)
       // 如果移动节点后原位置没有兄弟节点的话移除childrenContainer容器和展开收起按钮
-      if (!hasChildren(originParentNode)) {
-        originParentNode.parentElement.removeChild(getChildrenContainer(originParentNode))
-        this.allowFold && removeUnfoldElement(originParentNode)
+      if (!this.existChildren(originParentKey)) {
+        this.removeChildrenContainer(originParentKey)
+        this.allowFold && this.removeFoldButton(originParentKey)
       }
     }
 
+    // 处理target部分
     if (type === 'child') {
-      // 本身存在子节点的情况
-      if (hasChildren(targetNode)) {
-        getChildrenContainer(targetNode).appendChild(originNodeContainer)
+      // 本身存在子节点的情况，直接插入
+      if (this.existChildren(targetKey)) {
+        this.getChildrenContainer(targetKey).appendChild(originNodeContainer)
       } else {
         // 没有任何子节点的话创建一个容器
-        const newChildContainer = document.createElement('div')
-        newChildContainer.classList.add('tree-chart-children-container')
-        newChildContainer.style.marginLeft = `${this.option.distanceX}px`
-        newChildContainer.appendChild(originNodeContainer)
-        targetNode.parentElement.appendChild(newChildContainer)
+        const newChildrenContainer = this.createChildrenContainer()
+        newChildrenContainer.appendChild(originNodeContainer)
+        targetNode.parentElement.appendChild(newChildrenContainer)
       }
-      this.addChildrenKey(targetNode, originKey)
+      this.addChildrenKey(targetKey, originKey)
     } else {
-      const parentChildrenContainer = getChildrenContainer(targetParentNode)
-      if (type === 'previous') {
-        parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer)
-      }
-      if (type === 'next') {
-        parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer.nextElementSibling)
-      }
-      this.addChildrenKey(targetParentNode, originKey)
+      const targetParentKey = this.getParentKey(targetKey)
+      const parentChildrenContainer = this.getChildrenContainer(targetParentKey)
+      if (type === 'previous') parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer)
+      if (type === 'next') parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer.nextElementSibling)
+      this.addChildrenKey(targetParentKey, originKey)
     }
 
-    // 处理收起展开状态
-    if (this.allowFold && type === 'child') {
-      hasChildren(targetNode) && this.createFoldButton(targetNode)
+    // 作为子节点插入，如果没有展开按钮的话需要新增
+    if (type === 'child' && this.allowFold && !this.getFoldButton(targetKey)) {
+      this.createFoldButton(targetNode)
     }
 
     !unReloadLink && this.reloadLink()
+  }
+
+  removeNode(targetKey) {
+    const targetNode = this.getNodeElement(targetKey)
+    // 不支持移除root节点
+    if (!targetNode || targetNode === this.rootNode) return
+    // 修改父节点的data-children
+    const parentNodeKey = this.getParentKey(targetKey)
+    this.removeChildrenKey(parentNodeKey, targetKey)
+    // 移除当前节点
+    const targetNodeContainer = targetNode.parentElement
+    targetNodeContainer.parentElement.removeChild(targetNodeContainer)
+    // 如果当前节点是唯一的子节点就移除父节点的子容器
+    if (!this.existChildren(parentNodeKey)) {
+      this.removeChildrenContainer(parentNodeKey)
+      this.allowFold && this.removeFoldButton(parentNodeKey)
+    }
+    this.reloadLink()
   }
 
   reRender(data) {
@@ -117,20 +118,10 @@ class TreeChart {
 
   /* == */
 
-  addChildrenKey(nodeElement, targetKey) {
-    const childrenKeys = nodeElement.getAttribute('data-children')
-    nodeElement.setAttribute('data-children', childrenKeys ? `${childrenKeys},${targetKey}` : targetKey)
-  }
-
-  getParentNode(key) {
-    const currentNodeElement = this.getNodeElement(key)
-    const nodeContainerElement = currentNodeElement.parentElement
-    if (!nodeContainerElement) return []
-    const parentNodeChildrenElement = nodeContainerElement.parentElement
-    if (!parentNodeChildrenElement) return []
-    const parentNodeElement = parentNodeChildrenElement.previousElementSibling
-    if (!parentNodeElement) return []
-    return parentNodeElement
+  addChildrenKey(targetKey, newKey) {
+    const targetNodeElement = this.getNodeElement(targetKey)
+    const childrenKeys = targetNodeElement.getAttribute('data-children') || ''
+    targetNodeElement.setAttribute('data-children', childrenKeys ? `${childrenKeys},${newKey}` : newKey)
   }
 
   removeChildrenKey(targetKey, removeKey) {
@@ -144,6 +135,34 @@ class TreeChart {
     } else {
       targetNodeElement.removeAttribute('data-children')
     }
+  }
+
+  createChildrenContainer(className) {
+    const container = document.createElement('div')
+    container.classList.add('tree-chart-children-container')
+    className && container.classList.add(className)
+    container.style.marginLeft = `${this.option.distanceX}px`
+    return container
+  }
+
+  getChildrenContainer(targetKey) {
+    return this.getNodeElement(targetKey).nextElementSibling
+  }
+
+  removeChildrenContainer(targetKey) {
+    const container = this.getChildrenContainer(targetKey)
+    container.parentElement.removeChild(container)
+  }
+
+  getParentNode(key) {
+    const currentNodeElement = this.getNodeElement(key)
+    const nodeContainerElement = currentNodeElement.parentElement
+    if (!nodeContainerElement) return []
+    const parentNodeChildrenElement = nodeContainerElement.parentElement
+    if (!parentNodeChildrenElement) return []
+    const parentNodeElement = parentNodeChildrenElement.previousElementSibling
+    if (!parentNodeElement) return []
+    return parentNodeElement
   }
 
   getKeyField(data) {
@@ -242,16 +261,14 @@ class TreeChart {
     }
 
     if (existChildren) {
-      const childrenContainer = document.createElement('div')
-      childrenContainer.classList.add('tree-chart-children-container')
-      childrenContainer.style.marginLeft = `${this.option.distanceX}px`
-      nodeContainer.appendChild(childrenContainer)
       const childKeys = []
+      const childrenContainer = this.createChildrenContainer()
       children.forEach(child => {
         childKeys.push(this.getKeyField(child))
         this.createNodes(child, childrenContainer)
       })
       node.setAttribute('data-children', childKeys.join())
+      nodeContainer.appendChild(childrenContainer)
     }
   }
 
@@ -279,23 +296,21 @@ class TreeChart {
     }
     node.appendChild(renderContainer)
 
-    // 节点事件
+    // 添加节点事件
     this.setNodeEvent(renderContainer)
 
     // 拖拽控制
-    if (this.draggable) {
-      if (this.hooks.dragControl) {
-        const controlConfig = Object.assign({
-          drag: true,
-          insertChild: true,
-          insertPrevious: true,
-          insertNext: true
-        }, this.hooks.dragControl(data))
-        !controlConfig.drag && node.classList.add('not-allow-drag')
-        !controlConfig.insertChild && node.classList.add('not-allow-insert-child')
-        !controlConfig.insertPrevious && node.classList.add('not-allow-insert-previous')
-        !controlConfig.insertNext && node.classList.add('not-allow-insert-next')
-      }
+    if (this.draggable && this.hooks.dragControl) {
+      const controlConfig = Object.assign({
+        drag: true,
+        insertChild: true,
+        insertPrevious: true,
+        insertNext: true
+      }, this.hooks.dragControl(data))
+      !controlConfig.drag && node.classList.add('not-allow-drag')
+      !controlConfig.insertChild && node.classList.add('not-allow-insert-child')
+      !controlConfig.insertPrevious && node.classList.add('not-allow-insert-previous')
+      !controlConfig.insertNext && node.classList.add('not-allow-insert-next')
     }
 
     return node
@@ -308,6 +323,16 @@ class TreeChart {
     button.classList.add('tree-chart-unfold')
     button.innerHTML = '<div></div><div></div>'
     nodeElement.appendChild(button)
+  }
+
+  getFoldButton(targetKey) {
+    const targetNodeElement = this.getNodeElement(targetKey)
+    return targetNodeElement.querySelector('.tree-chart-unfold')
+  }
+
+  removeFoldButton(targetKey) {
+    const foldButton = this.getFoldButton(targetKey)
+    foldButton && foldButton.parentElement.removeChild(foldButton)
   }
 
   // 根据节点间父子关系生成连线信息，同时生成节点位置数据
@@ -471,7 +496,7 @@ class TreeChart {
     if (newNodeKey !== oldNodeKey) {
       const { positionData, linkContainer } = this
       // 替换父节点的children-key
-      const parentNode = this.getParentNode(node)
+      const parentNode = this.getParentNode(oldNodeKey)
       const parentChildrenKey = parentNode.getAttribute('data-children')
       parentNode.setAttribute('data-children', parentChildrenKey.replace(oldNodeKey, newNodeKey))
       // 替换连线的类名
@@ -543,27 +568,6 @@ class TreeChart {
 
   getNextKey(target) {
     return this.getKeyByElement(this.getNextNode(target))
-  }
-
-  removeNode(targetKey) {
-    const targetNode = this.getNodeElement(targetKey)
-    // 暂不支持移除root节点
-    if (!targetNode || targetNode === this.rootNode) return
-    const targetNodeContainer = targetNode.parentElement
-    const parentNode = this.getParentNode(targetNode)
-
-    // 删除父节点data-children
-    this.removeChildrenKey(this.getParentKey(targetKey), targetKey)
-
-    // 移除当前节点
-    targetNodeContainer.parentElement.removeChild(targetNodeContainer)
-
-    // 如果当前节点是唯一的子节点就移除对应容器
-    if (!hasChildren(parentNode)) {
-      removeChildrenContainer(parentNode)
-      this.allowFold && removeUnfoldElement(parentNode)
-    }
-    this.reloadLink()
   }
 
   getCurrentEventNode(target) {
@@ -870,19 +874,16 @@ class TreeChart {
       }
     } else {
       const createTempChildNode = () => {
-        const childrenContainer = document.createElement('div')
-        childrenContainer.classList.add('tree-chart-children-container', 'temp-children-container')
-        childrenContainer.style.marginLeft = `${this.option.distanceX}px`
-
-        const chartContainer = document.createElement('div')
-        chartContainer.classList.add('tree-chart-container')
-
         const chartContent = document.createElement('div')
         chartContent.classList.add('tree-chart-node', 'temp-chart-content')
         chartContent.style.width = `${coverNodeRight - coverNodeLeft}px`
         chartContent.style.height = `${coverNodeBottom - coverNodeTop}px`
 
+        const chartContainer = document.createElement('div')
+        chartContainer.classList.add('tree-chart-container')
         chartContainer.appendChild(chartContent)
+
+        const childrenContainer = this.createChildrenContainer('temp-children-container')
         childrenContainer.appendChild(chartContainer)
         coverNode.parentElement.appendChild(childrenContainer)
 
