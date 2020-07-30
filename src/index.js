@@ -2,7 +2,7 @@ import './index.scss'
 
 const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
 const isNumber = data => /Number/.test(Object.prototype.toString.call(data))
-const childrenIsFold = node => Boolean(node.querySelector('.can-unfold'))
+const childrenIsFold = node => Boolean(node.querySelector('.is-fold'))
 const setNotAllowEffect = node => node.classList.add('show-not-allow')
 
 class TreeChart {
@@ -14,6 +14,14 @@ class TreeChart {
 
   getNodeElement(key) {
     return this.nodeContainer.querySelector(`.tree-chart-item-${key}`)
+  }
+
+  getPreviousKey(target) {
+    return this.getKeyByElement(this.getPreviousNode(target))
+  }
+
+  getNextKey(target) {
+    return this.getKeyByElement(this.getNextNode(target))
   }
 
   getParentKey(key) {
@@ -108,6 +116,52 @@ class TreeChart {
     this.reloadLink()
   }
 
+  nodeIsFold(targetKey) {
+    return this.getFoldButton(targetKey).classList.contains('is-fold')
+  }
+
+  reRenderNode(targetKey, data) {
+    const oldNodeKey = targetKey.toString()
+    const newNodeKey = this.getKeyField(data)
+    const node = this.getNodeElement(oldNodeKey)
+    const childrenKeys = this.getChildrenKeys(targetKey)
+
+    // 更新key
+    if (newNodeKey !== oldNodeKey) {
+      const { linkContainer } = this
+      const parentNodeKey = this.getParentKey(oldNodeKey)
+      // 替换父节点的children-key
+      this.replaceChildrenKey(parentNodeKey, oldNodeKey, newNodeKey)
+      // 替换line的类名
+      const oldLineClassName = `line-${parentNodeKey}-${oldNodeKey}`
+      const parentLine = linkContainer.querySelector(`.${oldLineClassName}`)
+      parentLine.classList.remove(oldLineClassName)
+      parentLine.classList.add(`line-${parentNodeKey}-${newNodeKey}`)
+      childrenKeys.forEach(childKey => {
+        const oldChildLineClassName = `line-${oldNodeKey}-${childKey}`
+        const childLink = this.linkContainer.querySelector(`.${oldChildLineClassName}`)
+        childLink.classList.remove(oldChildLineClassName)
+        childLink.classList.add(`line-${newNodeKey}-${childKey}`)
+      })
+      // 更新position数据
+      this.replacePositionNodeKey(oldNodeKey, newNodeKey)
+    }
+
+    // 替换节点
+    const newNode = this.createNode(data)
+    childrenKeys.length && newNode.setAttribute('data-children', childrenKeys.join())
+    node.querySelector('.tree-chart-unfold') && this.createFoldButton(newNode)
+    const nodeContainer = node.parentElement
+    nodeContainer.insertBefore(newNode, node)
+    nodeContainer.removeChild(node)
+    this.setNodeEvent(newNode)
+  }
+
+  reloadLink() {
+    this.resize()
+    this.createLink()
+  }
+
   reRender(data) {
     this.nodeContainer.innerHTML = ''
     this.createNodes(data, this.nodeContainer, true)
@@ -133,6 +187,15 @@ class TreeChart {
     } else {
       targetNodeElement.removeAttribute('data-children')
     }
+  }
+
+  replaceChildrenKey(targetKey, oldKey, newKey) {
+    const childrenKeys = this.getChildrenKeys(targetKey)
+    if (!childrenKeys.length) return
+    const index = childrenKeys.indexOf(oldKey)
+    if (index === -1) return
+    childrenKeys.splice(index, 1, newKey)
+    this.getNodeElement(targetKey).setAttribute('data-children', childrenKeys.join())
   }
 
   createChildrenContainer(className) {
@@ -170,6 +233,7 @@ class TreeChart {
   constructor(option) {
     this.mergeOption(option)
     this.createChartElement()
+    this.resize()
     this.setEvent()
   }
 
@@ -228,6 +292,7 @@ class TreeChart {
     this.container = container
     this.createNodes(data, container)
     this.createLink()
+    this.createGhostContainer()
   }
 
   // 数据数据结构生成节点
@@ -314,6 +379,15 @@ class TreeChart {
     return node
   }
 
+  // 设置拖动镜像容器
+  createGhostContainer() {
+    const { container } = this
+    const ghostContainer = document.createElement('div')
+    ghostContainer.classList.add('tree-chart-ghost-container')
+    container.appendChild(ghostContainer)
+    this.ghostContainer = ghostContainer
+  }
+
   // 创建展开收起按钮
   createFoldButton(nodeElement) {
     if (nodeElement.querySelector('.tree-chart-unfold')) return
@@ -396,11 +470,12 @@ class TreeChart {
   addPositionData(nodeKey, positionDataItem) {
     const { positionData } = this
     // 保存节点位置信息
+    // nodeKey->{left,top,right,bottom }
     positionData.node[nodeKey] = positionDataItem
     for (const direct in positionDataItem) {
       // 获取节点方位数据值
       const positionValue = positionDataItem[direct]
-      // 获取数据归类容器，形成位置->nodeKey的映射
+      // 获取数据归类容器，形成position->[...nodeKey]的映射
       const directPositionMap = positionData[direct]
       if (directPositionMap[positionValue]) {
         directPositionMap[positionValue].push(nodeKey)
@@ -408,6 +483,7 @@ class TreeChart {
         directPositionMap[positionValue] = [nodeKey]
       }
       // 插入排序，并去重
+      // sortList->[...position]
       const sortList = directPositionMap.sortList
       if (sortList.length) {
         for (let index = 0, len = sortList.length; index < len; index++) {
@@ -425,18 +501,36 @@ class TreeChart {
     }
   }
 
+  replacePositionNodeKey(oldKey, newKey) {
+    const { positionData } = this
+    // 更新node集合
+    positionData.node[newKey] = positionData.node[oldKey]
+    delete positionData.node[oldKey]
+    void ['left', 'top', 'right', 'bottom'].forEach(direct => {
+      const directPositionMap = positionData[direct]
+      for (const positionValue in directPositionMap) {
+        if (positionValue === 'sortList') continue
+        const nodeKeyList = directPositionMap[positionValue]
+        const oldKeyIndex = nodeKeyList.indexOf(oldKey)
+        if (oldKeyIndex > -1) {
+          nodeKeyList.splice(oldKeyIndex, 1, newKey)
+          break
+        }
+      }
+    })
+  }
+
   setEvent() {
     this.allowFold && this.setFoldEvent()
     this.setClickHook()
-    this.setDrag()
-    this.resize()
+    this.draggable && this.setDrag()
     this.setDragScroll()
   }
 
   setFoldEvent() {
     this.nodeContainer.addEventListener('click', ({ target }) => {
       if (!target.classList.contains('tree-chart-unfold')) return
-      this.toggleFold(target)
+      this.toggleNodeFold(this.getKeyByElement(target.parentElement))
     })
   }
 
@@ -450,7 +544,7 @@ class TreeChart {
 
   // 两点间连线
   drawLine(from, to, isTemp) {
-    const option = this.option
+    const { option, linkContainer } = this
     const lineClassName = `line-${from.key}-${to.key}`
     let link = null
     if (document.querySelector(`.${lineClassName}`)) {
@@ -459,95 +553,29 @@ class TreeChart {
       link = document.createElementNS('http://www.w3.org/2000/svg', 'path')
       link.classList.add(lineClassName, `line-from-${from.key}`)
       isTemp && link.classList.add('is-temp-line')
-      this.linkContainer.appendChild(link)
+      linkContainer.appendChild(link)
     }
     const centerX = (to.x - from.x) / 2
     const centerY = (to.y - from.y) / 2
     const M = `${from.x} ${from.y}`
-    const L = `${to.x} ${to.y}`
+    const T = `${to.x} ${to.y}`
     const Q1 = `${from.x + centerX - option.smooth / 100 * centerX} ${from.y}`
     const Q2 = `${from.x + centerX} ${from.y + centerY}`
-    link.setAttribute('d', `M${M} Q${Q1} ${Q2} T ${L}`)
+    link.setAttribute('d', `M${M} Q${Q1} ${Q2} T ${T}`)
   }
 
-  toggleFold(data, isFold) {
-    let unfoldElement = null
-    if (typeof data === 'string') {
-      unfoldElement = this.nodeContainer.querySelector(`.tree-chart-item-${data} .tree-chart-unfold`)
-    } else if (isElement(data)) {
-      unfoldElement = data
+  toggleNodeFold(targetKey) {
+    const foldButton = this.getFoldButton(targetKey)
+    if (!foldButton) return
+    const childNodeContainer = this.getChildrenContainer(targetKey)
+    if (this.nodeIsFold(targetKey)) {
+      childNodeContainer.classList.remove('is-hidden')
+      foldButton.classList.remove('is-fold')
+    } else {
+      childNodeContainer.classList.add('is-hidden')
+      foldButton.classList.add('is-fold')
     }
-    if (unfoldElement) {
-      const childNodeContainer = unfoldElement.parentElement.nextElementSibling
-      const isUnfold = unfoldElement.classList.contains('can-unfold')
-      if (isUnfold === isFold) return
-      if (isUnfold) {
-        childNodeContainer.classList.remove('is-hidden')
-        unfoldElement.classList.remove('can-unfold')
-      } else {
-        childNodeContainer.classList.add('is-hidden')
-        unfoldElement.classList.add('can-unfold')
-      }
-      this.reloadLink()
-    }
-  }
-
-  reRenderNode(key, data) {
-    const oldNodeKey = key.toString()
-    const newNodeKey = this.getKeyField(data)
-    const node = this.getNodeElement(oldNodeKey)
-    const parentElement = node.parentElement
-    const childrenKeys = node.getAttribute('data-children')
-
-    if (newNodeKey !== oldNodeKey) {
-      const { positionData, linkContainer } = this
-      // 替换父节点的children-key
-      const parentNode = this.getParentNodeElement(oldNodeKey)
-      const parentChildrenKey = parentNode.getAttribute('data-children')
-      parentNode.setAttribute('data-children', parentChildrenKey.replace(oldNodeKey, newNodeKey))
-      // 替换连线的类名
-      const parentKey = this.getParentKey(oldNodeKey)
-      const parentLineClassName = `line-${parentKey}-${oldNodeKey}`
-      const parentLink = linkContainer.querySelector(`.${parentLineClassName}`)
-      parentLink.classList.add(`line-${parentKey}-${newNodeKey}`)
-      parentLink.classList.remove(parentLineClassName)
-      if (childrenKeys) {
-        childrenKeys.split(',').forEach(childKey => {
-          const childLineClassName = `line-${oldNodeKey}-${childKey}`
-          const childLink = this.linkContainer.querySelector(`.${childLineClassName}`)
-          childLink.classList.add(`line-${newNodeKey}-${childKey}`)
-          childLink.classList.remove(childLineClassName)
-        })
-      }
-      // 更新position数据
-      positionData.node[newNodeKey] = positionData.node[oldNodeKey]
-      delete positionData.node[oldNodeKey]
-      void ['left', 'top', 'right', 'bottom'].forEach(direct => {
-        const directPositionMap = positionData[direct]
-        for (const position in directPositionMap) {
-          if (position === 'sortList') continue
-          const nodeKeyList = directPositionMap[position]
-          const oldKeyIndex = nodeKeyList.indexOf(oldNodeKey)
-          if (oldKeyIndex > -1) {
-            nodeKeyList.splice(oldKeyIndex, 1, newNodeKey)
-            break
-          }
-        }
-      })
-    }
-
-    // 替换节点
-    const newNode = this.createNode(data)
-    childrenKeys && newNode.setAttribute('data-children', childrenKeys)
-    node.querySelector('.tree-chart-unfold') && this.createFoldButton(newNode)
-    parentElement.insertBefore(newNode, node)
-    parentElement.removeChild(node)
-    this.setNodeEvent(newNode)
-  }
-
-  reloadLink() {
-    this.resize()
-    this.createLink()
+    this.reloadLink()
   }
 
   getPreviousNode(target) {
@@ -566,14 +594,6 @@ class TreeChart {
     } catch (e) {
       return null
     }
-  }
-
-  getPreviousKey(target) {
-    return this.getKeyByElement(this.getPreviousNode(target))
-  }
-
-  getNextKey(target) {
-    return this.getKeyByElement(this.getNextNode(target))
   }
 
   getCurrentEventNode(target) {
@@ -633,20 +653,11 @@ class TreeChart {
 
   // 绑定拖动事件
   setDrag() {
-    if (!this.draggable) return
-    const hooks = this.hooks
-    const nodeContainer = this.nodeContainer
-    const container = this.container
-
-    // 设置镜像层
-    const ghostContainer = document.createElement('div')
-    ghostContainer.classList.add('tree-chart-ghost-container')
-    container.appendChild(ghostContainer)
-
+    const { ghostContainer, container, nodeContainer, hooks } = this
+    let dragstartLock = false
     const dragData = this.dragData = {
       key: null,
       element: null,
-      ghostContainer,
       ghostElement: null,
       ghostTranslateX: 0,
       ghostTranslateY: 0,
@@ -654,8 +665,6 @@ class TreeChart {
       eventOffsetX: 0,
       eventOffsetY: 0
     }
-
-    let dragstartLock = false
 
     nodeContainer.addEventListener('mousedown', e => {
       if (e.button !== 0) return
@@ -683,7 +692,7 @@ class TreeChart {
         getSelection ? getSelection().removeAllRanges() : document.selection.empty()
         nodeContainer.classList.add('cursor-move')
         // 添加镜像元素
-        !dragData.ghostContainer.contains(dragData.ghostElement) && dragData.ghostContainer.appendChild(dragData.ghostElement)
+        !ghostContainer.contains(dragData.ghostElement) && ghostContainer.appendChild(dragData.ghostElement)
         dragData.ghostTranslateX = e.clientX + container.scrollLeft - dragData.eventOffsetX
         dragData.ghostTranslateY = e.clientY + container.scrollTop - dragData.eventOffsetY
         dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
@@ -723,7 +732,7 @@ class TreeChart {
         this.insertNode(this.getKeyByElement(targetNode), this.getKeyByElement(dragNode), type)
         // 如果目标节点是折叠状态，插入子节点后自动展开
         if (type === 'child' && childrenIsFold(targetNode)) {
-          this.toggleFold(this.getKeyByElement(targetNode))
+          this.toggleNodeFold(this.getKeyByElement(targetNode))
         }
         hooks.dragEnd && hooks.dragEnd(
           from,
@@ -739,7 +748,7 @@ class TreeChart {
       this.nodeContainer.classList.remove('cursor-move')
       dragData.key = null
       dragData.element = null
-      dragData.ghostContainer.innerHTML = ''
+      ghostContainer.innerHTML = ''
       dragData.ghostElement = null
       dragData.ghostTranslateX = 0
       dragData.ghostTranslateY = 0
@@ -1042,23 +1051,19 @@ class TreeChart {
   }
 
   resize() {
-    const option = this.option
-    const nodeContainer = this.nodeContainer
+    const { option, nodeContainer, linkContainer, draggable, ghostContainer } = this
+    const { style: nodeContainerStyle } = nodeContainer
+    const { clientWidth: nodeContainerWidth, clientHeight: nodeContainerHeight } = nodeContainer
 
-    nodeContainer.style.width = 'auto'
-    nodeContainer.style.minWidth = 'auto'
-    let { clientWidth: width, clientHeight: height } = nodeContainer
-    width = `${this.draggable ? width + option.extendSpace : width}px`
-    height = `${height}px`
-    nodeContainer.style.width = width
-    nodeContainer.style.minWidth = '100%'
+    const width = `${draggable ? nodeContainerWidth + option.extendSpace : nodeContainerWidth}px`
+    const height = `${nodeContainerHeight}px`
 
-    const linkContainer = this.linkContainer
+    nodeContainerStyle.width = width
+    nodeContainerStyle.minWidth = '100%'
     linkContainer.setAttribute('width', width)
     linkContainer.setAttribute('height', height)
-
-    if (this.draggable) {
-      const ghostContainerStyle = this.dragData.ghostContainer.style
+    if (draggable) {
+      const { style: ghostContainerStyle } = ghostContainer
       ghostContainerStyle.width = width
       ghostContainerStyle.height = height
     }
