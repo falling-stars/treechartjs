@@ -55,7 +55,8 @@ const chart = new TreeChart({
   extendSpace: 392,
   padding: {
     right: 0,
-    top: 50
+    top: 50,
+    bottom: 80
   },
   dragControl(data) {
     return {
@@ -91,6 +92,9 @@ const chart = new TreeChart({
 })
 
 document.querySelector('.re-render').addEventListener('click', () => {
+  chart.reRender(data)
+})
+document.querySelector('.re-render-node').addEventListener('click', () => {
   chart.reRenderNode('122', { name: 999, id: 999 })
 })
 document.querySelector('.remove-node').addEventListener('click', () => {

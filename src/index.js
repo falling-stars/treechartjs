@@ -13,7 +13,7 @@ class TreeChart {
   }
 
   getNodeElement(key) {
-    return this.nodeContainer.querySelector(`.tree-chart-item-${key}`)
+    return this.nodesContainer.querySelector(`.tree-chart-item-${key}`)
   }
 
   getPreviousKey(target) {
@@ -158,13 +158,18 @@ class TreeChart {
   }
 
   reloadLink() {
-    this.resize()
     this.createLink()
+    this.resize()
   }
 
   reRender(data) {
-    this.nodeContainer.innerHTML = ''
-    this.createNodes(data, this.nodeContainer, true)
+    const { nodesContainer } = this
+    // 更新nodes
+    nodesContainer.innerHTML = ''
+    const nodeContainer = this.createNodeContainer()
+    nodesContainer.appendChild(nodeContainer)
+    this.createNodes(data, nodeContainer, true)
+    // 更新links
     this.reloadLink()
   }
 
@@ -290,48 +295,65 @@ class TreeChart {
     const { container, data } = this.option
     container.classList.add('tree-chart')
     this.container = container
-    this.createNodes(data, container)
+    this.createNodes(data, this.createNodesContainer())
+    this.createLinkContainer()
     this.createLink()
     this.createGhostContainer()
   }
 
+  createNodesContainer() {
+    const { option, container } = this
+    const { padding } = option
+    const nodesContainer = this.createNodeContainer()
+    nodesContainer.classList.add('is-nodes-container')
+    for (const key in padding) {
+      if (/left|top|right|bottom/.test(key)) {
+        let value = padding[key]
+        if (!isNumber(value) || value < 0) continue
+        if (this.draggable && /top|bottom/.test(key) && value < 30) value = 30
+        nodesContainer.style[`padding${key.replace(/^./, $ => $.toUpperCase())}`] = `${value}px`
+      }
+    }
+    container.appendChild(nodesContainer)
+    this.nodesContainer = nodesContainer
+    const nodeContainer = this.createNodeContainer()
+    nodesContainer.append(nodeContainer)
+    return nodeContainer
+  }
+
+  createNodeContainer() {
+    const { distanceY } = this.option
+    const nodeContainer = document.createElement('div')
+    nodeContainer.classList.add('tree-chart-container')
+    nodeContainer.style.marginBottom = `${distanceY}px`
+    return nodeContainer
+  }
+
   // 数据数据结构生成节点
   createNodes(data, parentNodeContainer, reRender) {
+    const { allowFold, rootNode } = this
     const { children } = data
     const existChildren = Array.isArray(children) && children.length > 0
 
-    const nodeContainer = reRender ? parentNodeContainer : this.createNodeContainer()
     // 创建节点
     const node = this.createNode(data)
-    this.allowFold && existChildren && this.createFoldButton(node)
-    nodeContainer.appendChild(node)
-    !reRender && parentNodeContainer.appendChild(nodeContainer)
+    allowFold && existChildren && this.createFoldButton(node)
+    parentNodeContainer.appendChild(node)
 
-    // 初始化时候
-    if (!this.nodeContainer) {
-      const { padding } = this.option
-      nodeContainer.classList.add('is-node-container')
-      for (const key in padding) {
-        if (/left|top|right|bottom/.test(key)) {
-          let value = padding[key]
-          if (!isNumber(value) || value < 0) continue
-          if (this.draggable && /top|bottom/.test(key) && value < 30) value = 30
-          nodeContainer.style[`padding${key.replace(/^./, $ => $.toUpperCase())}`] = `${value}px`
-        }
-      }
-      this.rootNode = node
-      this.nodeContainer = nodeContainer
-    }
+    // 初始化或重新渲染的时候
+    if (!rootNode || reRender) this.rootNode = node
 
     if (existChildren) {
       const childKeys = []
       const childrenContainer = this.createChildrenContainer()
       children.forEach(childData => {
         childKeys.push(this.getKeyField(childData))
-        this.createNodes(childData, childrenContainer)
+        const childNodeContainer = this.createNodeContainer()
+        childrenContainer.appendChild(childNodeContainer)
+        this.createNodes(childData, childNodeContainer)
       })
       node.setAttribute('data-children', childKeys.join())
-      nodeContainer.appendChild(childrenContainer)
+      parentNodeContainer.appendChild(childrenContainer)
     }
   }
 
@@ -407,24 +429,24 @@ class TreeChart {
     foldButton && foldButton.parentElement.removeChild(foldButton)
   }
 
+  createLinkContainer() {
+    const { container } = this
+    const linkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    linkContainer.classList.add('tree-chart-link-container')
+    container.appendChild(linkContainer)
+    this.linkContainer = linkContainer
+  }
+
   // 根据节点间父子关系生成连线信息，同时生成节点位置数据
   createLink() {
-    const { container, nodeContainer, linkContainer, draggable } = this
-    // 创建容器
-    if (linkContainer) {
-      this.linkContainer.innerHTML = ''
-    } else {
-      const newLinkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-      newLinkContainer.classList.add('tree-chart-link-container')
-      container.appendChild(newLinkContainer)
-      this.linkContainer = newLinkContainer
-    }
-
+    const { container, nodesContainer, linkContainer, draggable } = this
     const { left: containerLeft, top: containerTop } = container.getBoundingClientRect()
     const { scrollLeft, scrollTop } = container
+
+    linkContainer.innerHTML = ''
     draggable && this.initPositionData()
 
-    nodeContainer.querySelectorAll('.tree-chart-node').forEach(nodeElement => {
+    nodesContainer.querySelectorAll('.tree-chart-node').forEach(nodeElement => {
       const childrenKeys = nodeElement.getAttribute('data-children')
       const { left: nodeLeft, right: nodeRight, top: nodeTop, bottom: nodeBottom } = nodeElement.getBoundingClientRect()
       const nodeKey = this.getKeyByElement(nodeElement)
@@ -521,25 +543,18 @@ class TreeChart {
   }
 
   setEvent() {
-    this.allowFold && this.setFoldEvent()
+    const { allowFold, draggable } = this
+    allowFold && this.setFoldEvent()
     this.setClickHook()
-    this.draggable && this.setDrag()
+    draggable && this.setDrag()
     this.setDragScroll()
   }
 
   setFoldEvent() {
-    this.nodeContainer.addEventListener('click', ({ target }) => {
+    this.nodesContainer.addEventListener('click', ({ target }) => {
       if (!target.classList.contains('tree-chart-unfold')) return
       this.toggleNodeFold(this.getKeyByElement(target.parentElement))
     })
-  }
-
-  createNodeContainer() {
-    const { distanceY } = this.option
-    const nodeContainer = document.createElement('div')
-    nodeContainer.classList.add('tree-chart-container')
-    nodeContainer.style.marginBottom = `${distanceY}px`
-    return nodeContainer
   }
 
   // 两点间连线
@@ -597,11 +612,12 @@ class TreeChart {
   }
 
   getCurrentEventNode(target) {
+    const { nodesContainer } = this
     // 忽略展开按钮
     if (target.classList.contains('tree-chart-unfold')) return null
     if (target.classList.contains('tree-chart-node')) return target
     let searchElement = target
-    while (this.nodeContainer !== searchElement) {
+    while (nodesContainer !== searchElement) {
       if (searchElement.classList.contains('tree-chart-node')) return searchElement
       searchElement = searchElement.parentElement
     }
@@ -616,16 +632,16 @@ class TreeChart {
   }
 
   setClickHook() {
-    const { click: clickHook } = this.hooks
+    const { nodesContainer, hooks } = this
+    const { click: clickHook } = hooks
     if (!clickHook) return
-    const nodeContainer = this.nodeContainer
     // 用mouseEvent来实现click主要是为了区别dragStart和click的行为
     let mouseDownNode = null
-    nodeContainer.addEventListener('mousedown', ({ button, target }) => {
+    nodesContainer.addEventListener('mousedown', ({ button, target }) => {
       if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
       mouseDownNode = this.getCurrentEventNode(target)
     })
-    nodeContainer.addEventListener('mouseup', e => {
+    nodesContainer.addEventListener('mouseup', e => {
       const { button, target } = e
       if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
       const mouseUpNode = this.getCurrentEventNode(target)
@@ -653,7 +669,7 @@ class TreeChart {
 
   // 绑定拖动事件
   setDrag() {
-    const { ghostContainer, container, nodeContainer, hooks } = this
+    const { ghostContainer, container, nodesContainer, hooks } = this
     let dragstartLock = false
     const dragData = this.dragData = {
       key: null,
@@ -666,7 +682,7 @@ class TreeChart {
       eventOffsetY: 0
     }
 
-    nodeContainer.addEventListener('mousedown', e => {
+    nodesContainer.addEventListener('mousedown', e => {
       if (e.button !== 0) return
       const dragNode = this.getCurrentEventNode(e.target)
       if (!dragNode) return
@@ -683,14 +699,14 @@ class TreeChart {
       dragData.eventOffsetX = e.clientX + container.scrollLeft - left
       dragData.eventOffsetY = e.clientY + container.scrollTop - top
     })
-    nodeContainer.addEventListener('mousemove', e => {
+    nodesContainer.addEventListener('mousemove', e => {
       if (e.button !== 0) return
       if (dragData.element) {
         // 处理Chrome76版本长按不移动也会触发的情况
         if (e.movementX === 0 && e.movementY === 0) return
         // 清除文字选择对拖动的影响
         getSelection ? getSelection().removeAllRanges() : document.selection.empty()
-        nodeContainer.classList.add('cursor-move')
+        nodesContainer.classList.add('cursor-move')
         // 添加镜像元素
         !ghostContainer.contains(dragData.ghostElement) && ghostContainer.appendChild(dragData.ghostElement)
         dragData.ghostTranslateX = e.clientX + container.scrollLeft - dragData.eventOffsetX
@@ -717,7 +733,7 @@ class TreeChart {
         nextNode: this.getNextNode(node)
       }
     }
-    nodeContainer.addEventListener('mouseup', e => {
+    nodesContainer.addEventListener('mouseup', e => {
       if (e.button !== 0) return
       dragstartLock = false
       const targetNode = document.querySelector('.collide-node')
@@ -745,7 +761,7 @@ class TreeChart {
 
     const cancelDrag = () => {
       if (!dragData.element) return
-      this.nodeContainer.classList.remove('cursor-move')
+      nodesContainer.classList.remove('cursor-move')
       dragData.key = null
       dragData.element = null
       ghostContainer.innerHTML = ''
@@ -1051,15 +1067,19 @@ class TreeChart {
   }
 
   resize() {
-    const { option, nodeContainer, linkContainer, draggable, ghostContainer } = this
-    const { style: nodeContainerStyle } = nodeContainer
-    const { clientWidth: nodeContainerWidth, clientHeight: nodeContainerHeight } = nodeContainer
+    const { option, nodesContainer, linkContainer, draggable, ghostContainer } = this
+    const { style: nodesContainerStyle } = nodesContainer
 
+    // 重新渲染的情况需要先清除旧的尺寸
+    nodesContainerStyle.width = 'auto'
+    nodesContainerStyle.minWidth = 'auto'
+
+    const { clientWidth: nodeContainerWidth, clientHeight: nodeContainerHeight } = nodesContainer
     const width = `${draggable ? nodeContainerWidth + option.extendSpace : nodeContainerWidth}px`
     const height = `${nodeContainerHeight}px`
 
-    nodeContainerStyle.width = width
-    nodeContainerStyle.minWidth = '100%'
+    nodesContainerStyle.width = width
+    nodesContainerStyle.minWidth = '100%'
     linkContainer.setAttribute('width', width)
     linkContainer.setAttribute('height', height)
     if (draggable) {
@@ -1128,30 +1148,26 @@ class TreeChart {
   }
 
   setDragScroll() {
-    if (!this.dragScroll) return
-    this.foolowScrollData = {
-      interval: null,
-      direct: ''
-    }
-    const container = this.container
-    const nodeContainer = this.nodeContainer
+    const { dragScroll, container, nodesContainer } = this
+    if (!dragScroll) return
+    this.foolowScrollData = { interval: null, direct: '' }
     let lock = true
 
     const getEventNode = target => {
       if (target.classList.contains('tree-chart-node')) return target
       let searchElement = target
-      while (this.nodeContainer !== searchElement) {
+      while (nodesContainer !== searchElement) {
         if (searchElement.classList.contains('tree-chart-node')) return searchElement
         searchElement = searchElement.parentElement
       }
       return null
     }
 
-    nodeContainer.addEventListener('mousedown', e => {
+    nodesContainer.addEventListener('mousedown', e => {
       if (e.button !== 0 || getEventNode(e.target)) return
       lock = false
     })
-    nodeContainer.addEventListener('mousemove', e => {
+    nodesContainer.addEventListener('mousemove', e => {
       e.preventDefault()
       if (e.button !== 0 || lock) return
       container.scrollLeft = container.scrollLeft - e.movementX

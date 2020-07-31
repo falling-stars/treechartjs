@@ -3,7 +3,7 @@
   height: 100%;
   overflow: auto;
   position: relative;
-  .is-node-container {
+  .is-nodes-container {
     position: relative;
     z-index: 2;
     min-height: 100%;
@@ -27,7 +27,7 @@
     white-space: nowrap;
     position: relative;
     vertical-align: middle;
-    &:last-child, &.is-node-container {
+    &:last-child, &.is-nodes-container {
       margin-bottom: 0 !important;
     }
   }
