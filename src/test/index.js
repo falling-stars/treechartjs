@@ -75,11 +75,11 @@ const chart = new TreeChart({
   click() {
     console.log('click')
   },
-  mouseEnter() {
-    console.log('enter')
+  mouseEnter(data) {
+    console.log('enter', data)
   },
-  mouseLeave() {
-    console.log('leave')
+  mouseLeave(data) {
+    console.log('leave', data)
   },
   contentRender(data) {
     const container = document.createElement('div')

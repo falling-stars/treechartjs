@@ -154,7 +154,6 @@ class TreeChart {
     const nodeContainer = node.parentElement
     nodeContainer.insertBefore(newNode, node)
     nodeContainer.removeChild(node)
-    this.setNodeEvent(newNode)
   }
 
   reloadLink() {
@@ -382,7 +381,7 @@ class TreeChart {
     node.appendChild(renderContainer)
 
     // 添加节点事件
-    this.setNodeEvent(renderContainer)
+    this.setNodeEvent(node)
 
     // 拖拽控制
     if (this.draggable && this.hooks.dragControl) {
@@ -652,18 +651,17 @@ class TreeChart {
   }
 
   setNodeEvent(node) {
-    const hooks = this.hooks
-    if (!hooks.mouseEnter && !hooks.mouseLeave) return
+    const { mouseEnter: enterHook, mouseLeave: leaveHook } = this.hooks
     const argumentData = { key: this.getKeyByElement(node), element: node }
-    hooks.mouseEnter && node.addEventListener('mouseenter', e => {
+    enterHook && node.addEventListener('mouseenter', e => {
       // 忽略拖动被覆盖的情况
       if (this.isDragging()) return
-      hooks.mouseEnter(argumentData, e)
+      enterHook(argumentData, e)
     })
-    hooks.mouseLeave && node.addEventListener('mouseleave', e => {
+    leaveHook && node.addEventListener('mouseleave', e => {
       // 忽略拖动被覆盖的情况
       if (this.isDragging()) return
-      hooks.mouseLeave(argumentData, e)
+      leaveHook(argumentData, e)
     })
   }
 
