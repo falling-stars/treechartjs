@@ -545,7 +545,7 @@ class TreeChart {
     const { allowFold, draggable } = this
     allowFold && this.setFoldEvent()
     this.setClickHook()
-    draggable && this.setDrag()
+    draggable && this.setDragEvent()
     this.setDragScroll()
   }
 
@@ -560,10 +560,8 @@ class TreeChart {
   drawLine(from, to, isTemp) {
     const { option, linkContainer } = this
     const lineClassName = `line-${from.key}-${to.key}`
-    let link = null
-    if (document.querySelector(`.${lineClassName}`)) {
-      link = document.querySelector(`.${lineClassName}`)
-    } else {
+    let link = document.querySelector(`.${lineClassName}`)
+    if (!link) {
       link = document.createElementNS('http://www.w3.org/2000/svg', 'path')
       link.classList.add(lineClassName, `line-from-${from.key}`)
       isTemp && link.classList.add('is-temp-line')
@@ -614,7 +612,6 @@ class TreeChart {
     const { nodesContainer } = this
     // 忽略展开按钮
     if (target.classList.contains('tree-chart-unfold')) return null
-    if (target.classList.contains('tree-chart-node')) return target
     let searchElement = target
     while (nodesContainer !== searchElement) {
       if (searchElement.classList.contains('tree-chart-node')) return searchElement
@@ -625,8 +622,9 @@ class TreeChart {
 
   // 判断是否处于拖动过程
   isDragging() {
-    if (!this.draggable) return false
-    const { ghostTranslateX, ghostTranslateY, element } = this.dragData
+    const { draggable, dragData } = this
+    if (!draggable) return false
+    const { ghostTranslateX, ghostTranslateY, element } = dragData
     return element && (ghostTranslateX !== 0 || ghostTranslateY !== 0)
   }
 
@@ -637,12 +635,12 @@ class TreeChart {
     // 用mouseEvent来实现click主要是为了区别dragStart和click的行为
     let mouseDownNode = null
     nodesContainer.addEventListener('mousedown', ({ button, target }) => {
-      if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
+      if (button !== 0) return
       mouseDownNode = this.getCurrentEventNode(target)
     })
     nodesContainer.addEventListener('mouseup', e => {
       const { button, target } = e
-      if (button !== 0 || target.classList.contains('tree-chart-unfold')) return
+      if (button !== 0) return
       const mouseUpNode = this.getCurrentEventNode(target)
       if (mouseUpNode && mouseUpNode === mouseDownNode && !this.isDragging()) {
         clickHook({ key: this.getKeyByElement(mouseUpNode), element: mouseUpNode }, e)
@@ -653,12 +651,13 @@ class TreeChart {
   setNodeEvent(node) {
     const { mouseEnter: enterHook, mouseLeave: leaveHook } = this.hooks
     const argumentData = { key: this.getKeyByElement(node), element: node }
-    enterHook && node.addEventListener('mouseenter', e => {
+    const contentElement = node.querySelector('.tree-render-container')
+    enterHook && contentElement.addEventListener('mouseenter', e => {
       // 忽略拖动被覆盖的情况
       if (this.isDragging()) return
       enterHook(argumentData, e)
     })
-    leaveHook && node.addEventListener('mouseleave', e => {
+    leaveHook && contentElement.addEventListener('mouseleave', e => {
       // 忽略拖动被覆盖的情况
       if (this.isDragging()) return
       leaveHook(argumentData, e)
@@ -666,7 +665,7 @@ class TreeChart {
   }
 
   // 绑定拖动事件
-  setDrag() {
+  setDragEvent() {
     const { ghostContainer, container, nodesContainer, hooks } = this
     let dragstartLock = false
     const dragData = this.dragData = {
