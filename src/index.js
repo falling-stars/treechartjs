@@ -666,11 +666,13 @@ class TreeChart {
 
   // 绑定拖动事件
   setDragEvent() {
+    // todo
     const { ghostContainer, container, nodesContainer, hooks } = this
-    let dragstartLock = false
+    const { preventDrag, dragStart, dragEnd } = hooks
+
+    let emitDragStart = true
     const dragData = this.dragData = {
       key: null,
-      element: null,
       ghostElement: null,
       ghostTranslateX: 0,
       ghostTranslateY: 0,
@@ -682,41 +684,39 @@ class TreeChart {
     nodesContainer.addEventListener('mousedown', e => {
       if (e.button !== 0) return
       const dragNode = this.getCurrentEventNode(e.target)
-      if (!dragNode) return
       // 根节点不允许拖动
-      if (dragNode === this.rootNode) return
+      if (!dragNode || dragNode === this.rootNode) return
       // 用户禁止拖动的节点
       if (dragNode.classList.contains('not-allow-drag')) return
       const dragNodeKey = this.getKeyByElement(dragNode)
-      if (hooks.preventDrag && hooks.preventDrag(e, { key: dragNodeKey, element: dragNode })) return
+      // preventDrag返回true时阻止拖动
+      if (typeof preventDrag === 'function' && preventDrag(e, { key: dragNodeKey, element: dragNode })) return
       dragData.key = dragNodeKey
-      dragData.element = dragNode
       dragData.ghostElement = dragNode.cloneNode(true)
-      const { left, top } = this.positionData.node[this.getKeyByElement(dragNode)]
+      const { left, top } = this.positionData.node[dragNodeKey]
       dragData.eventOffsetX = e.clientX + container.scrollLeft - left
       dragData.eventOffsetY = e.clientY + container.scrollTop - top
     })
     nodesContainer.addEventListener('mousemove', e => {
-      if (e.button !== 0) return
-      if (dragData.element) {
-        // 处理Chrome76版本长按不移动也会触发的情况
-        if (e.movementX === 0 && e.movementY === 0) return
-        // 清除文字选择对拖动的影响
-        getSelection ? getSelection().removeAllRanges() : document.selection.empty()
-        nodesContainer.classList.add('cursor-move')
-        // 添加镜像元素
-        !ghostContainer.contains(dragData.ghostElement) && ghostContainer.appendChild(dragData.ghostElement)
-        dragData.ghostTranslateX = e.clientX + container.scrollLeft - dragData.eventOffsetX
-        dragData.ghostTranslateY = e.clientY + container.scrollTop - dragData.eventOffsetY
-        dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
-        const ghostPosition = this.getGhostPosition()
-        this.setDragEffect(ghostPosition)
-        // 跟随滚动
-        this.followScroll(ghostPosition)
-        if (!dragstartLock && hooks.dragStart) {
-          dragstartLock = true
-          hooks.dragStart({ key: this.getKeyByElement(dragData.element), element: dragData.element.childNodes[0] })
-        }
+      if (e.button !== 0 || !dragData.key) return
+      // 处理Chrome76版本长按不移动也会触发的情况
+      if (e.movementX === 0 && e.movementY === 0) return
+      // 清除文字选择对拖动的影响
+      getSelection && getSelection().removeAllRanges()
+      // 光标形状变为move
+      nodesContainer.classList.add('cursor-move')
+      // 添加镜像元素和同步位置
+      !ghostContainer.contains(dragData.ghostElement) && ghostContainer.appendChild(dragData.ghostElement)
+      dragData.ghostTranslateX = e.clientX + container.scrollLeft - dragData.eventOffsetX
+      dragData.ghostTranslateY = e.clientY + container.scrollTop - dragData.eventOffsetY
+      dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
+      const ghostPosition = this.getGhostPosition()
+      this.setDragEffect(ghostPosition)
+      // 跟随滚动
+      this.followScroll(ghostPosition)
+      if (emitDragStart && typeof dragStart === 'function') {
+        emitDragStart = false
+        dragStart({ key: dragData.key, element: this.getNodeElement(dragData.key) })
       }
     })
     const createParams = node => {
@@ -732,10 +732,10 @@ class TreeChart {
     }
     nodesContainer.addEventListener('mouseup', e => {
       if (e.button !== 0) return
-      dragstartLock = false
+      emitDragStart = true
       const targetNode = document.querySelector('.collide-node')
       if (targetNode) {
-        const dragNode = dragData.element
+        const dragNode = this.getNodeElement(dragData.key)
         let type = ''
         if (targetNode.classList.contains('become-previous')) type = 'previous'
         if (targetNode.classList.contains('become-next')) type = 'next'
@@ -747,20 +747,19 @@ class TreeChart {
         if (type === 'child' && childrenIsFold(targetNode)) {
           this.toggleNodeFold(this.getKeyByElement(targetNode))
         }
-        hooks.dragEnd && hooks.dragEnd(
+        typeof dragEnd === 'function' && dragEnd(
           from,
           createParams(dragNode),
-          { key: this.getKeyByElement(dragNode), element: dragNode },
+          { key: dragData.key, element: dragNode },
           { key: this.getKeyByElement(targetNode), element: targetNode },
           type)
       }
     })
 
     const cancelDrag = () => {
-      if (!dragData.element) return
+      if (!dragData.key) return
       nodesContainer.classList.remove('cursor-move')
       dragData.key = null
-      dragData.element = null
       ghostContainer.innerHTML = ''
       dragData.ghostElement = null
       dragData.ghostTranslateX = 0
@@ -779,7 +778,7 @@ class TreeChart {
       left: container.scrollLeft
     }
     container.addEventListener('scroll', () => {
-      if (dragData.element && dragData.ghostElement) {
+      if (dragData.key && dragData.ghostElement) {
         dragData.ghostTranslateY = dragData.ghostTranslateY + container.scrollTop - oldScroll.top
         dragData.ghostTranslateX = dragData.ghostTranslateX + container.scrollLeft - oldScroll.left
         dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
@@ -817,7 +816,8 @@ class TreeChart {
     let from = null
     let to = null
 
-    const { element: dragElement, key: dragNodeKey } = this.dragData
+    const { key: dragNodeKey } = this.dragData
+    const dragElement = this.getNodeElement(dragNodeKey)
     // 不可拖到子节点上
     if (dragElement.parentElement.contains(coverNode)) return setNotAllowEffect(coverNode)
 
@@ -953,7 +953,7 @@ class TreeChart {
   // 获取拖动过程中碰撞的元素
   getCollideNode({ left, right, top, bottom }) {
     const { dragData, positionData } = this
-    const draggingElementKey = this.getKeyByElement(dragData.element)
+    const draggingElementKey = dragData.key
     // Find current collide contentElement position
     const searchCurrent = (target, list, searchLarge) => {
       const listLen = list.length
