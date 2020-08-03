@@ -357,6 +357,9 @@ class TreeChart {
   }
 
   createNode(data) {
+    const { draggable, hooks } = this
+    const { contentRender, dragControl } = hooks
+
     const node = document.createElement('div')
     const key = this.getKeyField(data)
     node.classList.add('tree-chart-node', `tree-chart-item-${key}`)
@@ -366,8 +369,8 @@ class TreeChart {
     renderContainer.classList.add('tree-render-container')
 
     // 生成用户自定义模板
-    if (this.hooks.contentRender) {
-      const renderResult = this.hooks.contentRender(data)
+    if (contentRender) {
+      const renderResult = contentRender(data)
       if (typeof renderResult === 'string') {
         renderContainer.innerHTML = renderResult.replace(/>\s+</g, '><')
       } else if (isElement(renderResult)) {
@@ -384,13 +387,14 @@ class TreeChart {
     this.setNodeEvent(node)
 
     // 拖拽控制
-    if (this.draggable && this.hooks.dragControl) {
-      const controlConfig = Object.assign({
+    if (draggable && dragControl) {
+      const controlConfig = {
         drag: true,
         insertChild: true,
         insertPrevious: true,
-        insertNext: true
-      }, this.hooks.dragControl(data))
+        insertNext: true,
+        ...dragControl(data)
+      }
       !controlConfig.drag && node.classList.add('not-allow-drag')
       !controlConfig.insertChild && node.classList.add('not-allow-insert-child')
       !controlConfig.insertPrevious && node.classList.add('not-allow-insert-previous')
@@ -624,8 +628,8 @@ class TreeChart {
   isDragging() {
     const { draggable, dragData } = this
     if (!draggable) return false
-    const { ghostTranslateX, ghostTranslateY, element } = dragData
-    return element && (ghostTranslateX !== 0 || ghostTranslateY !== 0)
+    const { ghostTranslateX, ghostTranslateY, key } = dragData
+    return key && (ghostTranslateX !== 0 || ghostTranslateY !== 0)
   }
 
   setClickHook() {
@@ -671,54 +675,60 @@ class TreeChart {
     const { preventDrag, dragStart, dragEnd } = hooks
 
     let emitDragStart = true
-    const dragData = this.dragData = {
+    this.dragData = {
       key: null,
       ghostElement: null,
       ghostTranslateX: 0,
       ghostTranslateY: 0,
-      // mousedown事件在节点的触发位置
-      eventOffsetX: 0,
-      eventOffsetY: 0
+      // mousedown事件在节点的触发的偏移位置
+      mouseDownOffsetX: 0,
+      mouseDownOffsetY: 0
     }
 
     nodesContainer.addEventListener('mousedown', e => {
       if (e.button !== 0) return
       const dragNode = this.getCurrentEventNode(e.target)
+      const dragNodeKey = this.getKeyByElement(dragNode)
+
       // 根节点不允许拖动
       if (!dragNode || dragNode === this.rootNode) return
       // 用户禁止拖动的节点
       if (dragNode.classList.contains('not-allow-drag')) return
-      const dragNodeKey = this.getKeyByElement(dragNode)
       // preventDrag返回true时阻止拖动
-      if (typeof preventDrag === 'function' && preventDrag(e, { key: dragNodeKey, element: dragNode })) return
-      dragData.key = dragNodeKey
-      dragData.ghostElement = dragNode.cloneNode(true)
+      if (preventDrag && preventDrag({ key: dragNodeKey, element: dragNode }, e)) return
+
+      this.dragData.key = dragNodeKey
+      this.dragData.ghostElement = dragNode.cloneNode(true)
       const { left, top } = this.positionData.node[dragNodeKey]
-      dragData.eventOffsetX = e.clientX + container.scrollLeft - left
-      dragData.eventOffsetY = e.clientY + container.scrollTop - top
+      this.dragData.mouseDownOffsetX = e.clientX + container.scrollLeft - left
+      this.dragData.mouseDownOffsetY = e.clientY + container.scrollTop - top
     })
+
     nodesContainer.addEventListener('mousemove', e => {
-      if (e.button !== 0 || !dragData.key) return
+      const { ghostElement, mouseDownOffsetX, mouseDownOffsetY, key } = this.dragData
+      if (e.button !== 0 || !key) return
       // 处理Chrome76版本长按不移动也会触发的情况
       if (e.movementX === 0 && e.movementY === 0) return
+
       // 清除文字选择对拖动的影响
       getSelection && getSelection().removeAllRanges()
       // 光标形状变为move
       nodesContainer.classList.add('cursor-move')
       // 添加镜像元素和同步位置
-      !ghostContainer.contains(dragData.ghostElement) && ghostContainer.appendChild(dragData.ghostElement)
-      dragData.ghostTranslateX = e.clientX + container.scrollLeft - dragData.eventOffsetX
-      dragData.ghostTranslateY = e.clientY + container.scrollTop - dragData.eventOffsetY
-      dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
+      !ghostContainer.contains(ghostElement) && ghostContainer.appendChild(ghostElement)
+      const ghostTranslateX = this.dragData.ghostTranslateX = e.clientX + container.scrollLeft - mouseDownOffsetX
+      const ghostTranslateY = this.dragData.ghostTranslateY = e.clientY + container.scrollTop - mouseDownOffsetY
+      ghostElement.style.transform = `translate(${ghostTranslateX}px, ${ghostTranslateY}px)`
       const ghostPosition = this.getGhostPosition()
       this.setDragEffect(ghostPosition)
       // 跟随滚动
       this.followScroll(ghostPosition)
-      if (emitDragStart && typeof dragStart === 'function') {
+      if (dragStart && emitDragStart) {
         emitDragStart = false
-        dragStart({ key: dragData.key, element: this.getNodeElement(dragData.key) })
+        dragStart({ key, element: this.getNodeElement(key) })
       }
     })
+
     const createParams = node => {
       const nodeKey = this.getKeyByElement(node)
       return {
@@ -732,10 +742,11 @@ class TreeChart {
     }
     nodesContainer.addEventListener('mouseup', e => {
       if (e.button !== 0) return
+      const { key } = this.dragData
       emitDragStart = true
       const targetNode = document.querySelector('.collide-node')
       if (targetNode) {
-        const dragNode = this.getNodeElement(dragData.key)
+        const dragNode = this.getNodeElement(key)
         let type = ''
         if (targetNode.classList.contains('become-previous')) type = 'previous'
         if (targetNode.classList.contains('become-next')) type = 'next'
@@ -747,25 +758,28 @@ class TreeChart {
         if (type === 'child' && childrenIsFold(targetNode)) {
           this.toggleNodeFold(this.getKeyByElement(targetNode))
         }
-        typeof dragEnd === 'function' && dragEnd(
+        dragEnd && dragEnd(
           from,
           createParams(dragNode),
-          { key: dragData.key, element: dragNode },
+          { key, element: dragNode },
           { key: this.getKeyByElement(targetNode), element: targetNode },
           type)
       }
     })
 
     const cancelDrag = () => {
-      if (!dragData.key) return
+      const { key } = this.dragData
+      if (!key) return
       nodesContainer.classList.remove('cursor-move')
-      dragData.key = null
       ghostContainer.innerHTML = ''
-      dragData.ghostElement = null
-      dragData.ghostTranslateX = 0
-      dragData.ghostTranslateY = 0
-      dragData.eventOffsetX = 0
-      dragData.eventOffsetY = 0
+      this.dragData = {
+        key: null,
+        ghostElement: null,
+        ghostTranslateX: 0,
+        ghostTranslateY: 0,
+        mouseDownOffsetX: 0,
+        mouseDownOffsetY: 0
+      }
       this.removeDragEffect()
       this.stopFollowScroll()
     }
@@ -778,10 +792,11 @@ class TreeChart {
       left: container.scrollLeft
     }
     container.addEventListener('scroll', () => {
-      if (dragData.key && dragData.ghostElement) {
-        dragData.ghostTranslateY = dragData.ghostTranslateY + container.scrollTop - oldScroll.top
-        dragData.ghostTranslateX = dragData.ghostTranslateX + container.scrollLeft - oldScroll.left
-        dragData.ghostElement.style.transform = `translate(${dragData.ghostTranslateX}px, ${dragData.ghostTranslateY}px)`
+      const { key, ghostElement, ghostTranslateY: oldTranslateY, ghostTranslateX: oldTranslateX } = this.dragData
+      if (key && ghostElement) {
+        const ghostTranslateX = this.dragData.ghostTranslateX = oldTranslateX + container.scrollLeft - oldScroll.left
+        const ghostTranslateY = this.dragData.ghostTranslateY = oldTranslateY + container.scrollTop - oldScroll.top
+        ghostElement.style.transform = `translate(${ghostTranslateX}px, ${ghostTranslateY}px)`
         this.setDragEffect(this.getGhostPosition())
       }
       oldScroll.top = container.scrollTop
