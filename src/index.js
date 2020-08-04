@@ -670,7 +670,6 @@ class TreeChart {
 
   // 绑定拖动事件
   setDragEvent() {
-    // todo
     const { ghostContainer, container, nodesContainer, hooks } = this
     const { preventDrag, dragStart, dragEnd } = hooks
 
@@ -686,7 +685,8 @@ class TreeChart {
     }
 
     nodesContainer.addEventListener('mousedown', e => {
-      if (e.button !== 0) return
+      const { button, clientX, clientY } = e
+      if (button !== 0) return
       const dragNode = this.getCurrentEventNode(e.target)
       const dragNodeKey = this.getKeyByElement(dragNode)
 
@@ -697,18 +697,23 @@ class TreeChart {
       // preventDrag返回true时阻止拖动
       if (preventDrag && preventDrag({ key: dragNodeKey, element: dragNode }, e)) return
 
-      this.dragData.key = dragNodeKey
-      this.dragData.ghostElement = dragNode.cloneNode(true)
-      const { left, top } = this.positionData.node[dragNodeKey]
-      this.dragData.mouseDownOffsetX = e.clientX + container.scrollLeft - left
-      this.dragData.mouseDownOffsetY = e.clientY + container.scrollTop - top
+      // 保存偏移量等
+      const { left: nodePositionLeft, top: nodePositionTop } = this.positionData.node[dragNodeKey]
+      Object.assign(this.dragData, {
+        key: dragNodeKey,
+        ghostElement: dragNode.cloneNode(true),
+        mouseDownOffsetX: clientX + container.scrollLeft - nodePositionLeft,
+        mouseDownOffsetY: clientY + container.scrollTop - nodePositionTop
+      })
     })
 
     nodesContainer.addEventListener('mousemove', e => {
+      const { button, movementX, movementY, clientX, clientY } = e
       const { ghostElement, mouseDownOffsetX, mouseDownOffsetY, key } = this.dragData
-      if (e.button !== 0 || !key) return
+
+      if (button !== 0 || !key) return
       // 处理Chrome76版本长按不移动也会触发的情况
-      if (e.movementX === 0 && e.movementY === 0) return
+      if (movementX === 0 && movementY === 0) return
 
       // 清除文字选择对拖动的影响
       getSelection && getSelection().removeAllRanges()
@@ -716,9 +721,13 @@ class TreeChart {
       nodesContainer.classList.add('cursor-move')
       // 添加镜像元素和同步位置
       !ghostContainer.contains(ghostElement) && ghostContainer.appendChild(ghostElement)
-      const ghostTranslateX = this.dragData.ghostTranslateX = e.clientX + container.scrollLeft - mouseDownOffsetX
-      const ghostTranslateY = this.dragData.ghostTranslateY = e.clientY + container.scrollTop - mouseDownOffsetY
+      const ghostTranslateX = clientX + container.scrollLeft - mouseDownOffsetX
+      const ghostTranslateY = clientY + container.scrollTop - mouseDownOffsetY
       ghostElement.style.transform = `translate(${ghostTranslateX}px, ${ghostTranslateY}px)`
+      Object.assign(this.dragData, {
+        ghostTranslateX,
+        ghostTranslateY
+      })
       const ghostPosition = this.getGhostPosition()
       this.setDragEffect(ghostPosition)
       // 跟随滚动
@@ -805,12 +814,12 @@ class TreeChart {
   }
 
   getGhostPosition() {
-    const dragData = this.dragData
+    const { ghostTranslateX, ghostTranslateY, ghostElement } = this.dragData
     return {
-      left: dragData.ghostTranslateX,
-      top: dragData.ghostTranslateY,
-      right: dragData.ghostTranslateX + dragData.ghostElement.offsetWidth,
-      bottom: dragData.ghostTranslateY + dragData.ghostElement.offsetHeight
+      left: ghostTranslateX,
+      top: ghostTranslateY,
+      right: ghostTranslateX + ghostElement.offsetWidth,
+      bottom: ghostTranslateY + ghostElement.offsetHeight
     }
   }
 
@@ -967,22 +976,14 @@ class TreeChart {
 
   // 获取拖动过程中碰撞的元素
   getCollideNode({ left, right, top, bottom }) {
-    const { dragData, positionData } = this
-    const draggingElementKey = dragData.key
-    // Find current collide contentElement position
-    const searchCurrent = (target, list, searchLarge) => {
-      const listLen = list.length
-      if (searchLarge) {
-        for (let i = 0; i < listLen; i++) {
-          if (list[i] >= target) return list[i]
-        }
-      } else {
-        for (let i = listLen - 1; i > -1; i--) {
-          if (list[i] <= target) return list[i]
-        }
-      }
-      return null
-    }
+    const { key: draggingKey } = this.dragData
+    const {
+      left: positionLeft,
+      right: positionRight,
+      top: positionTop,
+      bottom: positionBottom,
+      node: nodePosition
+    } = this.positionData
 
     const getRangeList = (flagItem, data, direct = 'after') => {
       let result = []
@@ -994,34 +995,42 @@ class TreeChart {
       return result
     }
 
-    const leftList = positionData.left.sortList
-    const topList = positionData.top.sortList
-    const rightList = positionData.right.sortList
-    const bottomList = positionData.bottom.sortList
-
-    // 寻找边界内的坐标
-    const searchLeft = searchCurrent(left, rightList, true)
-    const searchTop = searchCurrent(top, bottomList, true)
-    const searchRight = searchCurrent(right, leftList)
-    const searchBottom = searchCurrent(bottom, topList)
+    // 寻找符合条件最近的位置
+    const searchCurrentPosition = (target, sortList, searchLarge) => {
+      const listLen = sortList.length
+      if (searchLarge) {
+        for (let i = 0; i < listLen; i++) {
+          if (sortList[i] >= target) return sortList[i]
+        }
+      } else {
+        for (let i = listLen - 1; i > -1; i--) {
+          if (sortList[i] <= target) return sortList[i]
+        }
+      }
+      return null
+    }
+    const currentLeft = searchCurrentPosition(left, positionRight.sortList, true)
+    const currentTop = searchCurrentPosition(top, positionBottom.sortList, true)
+    const currentRight = searchCurrentPosition(right, positionLeft.sortList)
+    const currentBottom = searchCurrentPosition(bottom, positionTop.sortList)
 
     const leftTopCollide = []
     const rightBottomCollide = []
 
     // 左顶点和上顶点求交集确定在右下方的元素
-    const leftCatchList = getRangeList(searchLeft, positionData.right)
-    const topCatchList = getRangeList(searchTop, positionData.bottom)
+    const leftCatchList = getRangeList(currentLeft, positionRight)
+    const topCatchList = getRangeList(currentTop, positionBottom)
     leftCatchList.forEach(item => {
-      if (item !== draggingElementKey && topCatchList.includes(item)) {
+      if (item !== draggingKey && topCatchList.includes(item)) {
         leftTopCollide.push(item)
       }
     })
 
     // 右顶点和下顶点求交集确定在左上方的元素
-    const rightCatchList = getRangeList(searchRight, positionData.left, 'before')
-    const bottomCatchList = getRangeList(searchBottom, positionData.top, 'before')
+    const rightCatchList = getRangeList(currentRight, positionLeft, 'before')
+    const bottomCatchList = getRangeList(currentBottom, positionTop, 'before')
     rightCatchList.forEach(item => {
-      if (item !== draggingElementKey && bottomCatchList.includes(item)) {
+      if (item !== draggingKey && bottomCatchList.includes(item)) {
         rightBottomCollide.push(item)
       }
     })
@@ -1031,7 +1040,7 @@ class TreeChart {
     leftTopCollide.forEach(nodeKey => {
       if (!rightBottomCollide.includes(nodeKey)) return
       const node = this.getNodeElement(nodeKey)
-      collideNode.push({ node, key: nodeKey, position: this.positionData.node[nodeKey] })
+      collideNode.push({ node, key: nodeKey, position: nodePosition[nodeKey] })
     })
 
     if (!collideNode.length) return null
