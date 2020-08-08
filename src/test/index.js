@@ -69,18 +69,18 @@ const chart = new TreeChart({
   dragStart() {
     console.log('dragstart')
   },
-  dragEnd() {
-    console.log('dragend')
+  dragEnd(data) {
+    console.log('dragend', data)
   },
   click() {
     console.log('click')
   },
-  mouseEnter(data) {
-    console.log('enter', data)
-  },
-  mouseLeave(data) {
-    console.log('leave', data)
-  },
+  // mouseEnter(data) {
+  //   console.log('enter', data)
+  // },
+  // mouseLeave(data) {
+  //   console.log('leave', data)
+  // },
   contentRender(data) {
     const container = document.createElement('div')
     container.style.width = '290px'
@@ -111,4 +111,7 @@ document.querySelector('.insert-previous').addEventListener('click', () => {
 })
 document.querySelector('.insert-next').addEventListener('click', () => {
   chart.insertNode('12', { name: 'insertNext', id: 'insertNext' }, 'next')
+})
+document.querySelector('.destroy').addEventListener('click', () => {
+  chart.destroy()
 })

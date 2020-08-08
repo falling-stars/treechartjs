@@ -16,16 +16,31 @@ class TreeChart {
     return this.nodesContainer.querySelector(`.tree-chart-item-${key}`)
   }
 
-  getPreviousKey(target) {
-    return this.getKeyByElement(this.getPreviousNode(target))
+  getPreviousKey(key) {
+    try {
+      const nodeElement = this.getNodeElement(key)
+      return this.getKeyByElement(nodeElement.parentElement.previousElementSibling.querySelector('.tree-chart-node'))
+    } catch (e) {
+      return null
+    }
   }
 
-  getNextKey(target) {
-    return this.getKeyByElement(this.getNextNode(target))
+  getNextKey(key) {
+    try {
+      const nodeElement = this.getNodeElement(key)
+      return this.getKeyByElement(nodeElement.parentElement.nextElementSibling.querySelector('.tree-chart-node'))
+    } catch (e) {
+      return null
+    }
   }
 
   getParentKey(key) {
-    return this.getKeyByElement(this.getParentNodeElement(key))
+    try {
+      const nodeElement = this.getNodeElement(key)
+      return this.getKeyByElement(nodeElement.parentElement.parentElement.previousElementSibling)
+    } catch (e) {
+      return null
+    }
   }
 
   getChildrenKeys(key) {
@@ -76,6 +91,8 @@ class TreeChart {
       // 本身存在子节点的情况，直接插入
       if (this.existChildren(targetKey)) {
         this.getChildrenContainer(targetKey).appendChild(originNodeContainer)
+        // 如果目标节点是折叠状态，插入子节点后自动展开
+        this.nodeIsFold(targetKey) && this.toggleNodeFold(targetKey)
       } else {
         // 没有任何子节点的话创建一个容器
         const newChildrenContainer = this.createChildrenContainer()
@@ -217,17 +234,6 @@ class TreeChart {
   removeChildrenContainer(targetKey) {
     const container = this.getChildrenContainer(targetKey)
     container.parentElement.removeChild(container)
-  }
-
-  getParentNodeElement(key) {
-    const currentNodeElement = this.getNodeElement(key)
-    const nodeContainerElement = currentNodeElement.parentElement
-    if (!nodeContainerElement) return null
-    const parentNodeChildrenElement = nodeContainerElement.parentElement
-    if (!parentNodeChildrenElement) return null
-    const parentNodeElement = parentNodeChildrenElement.previousElementSibling
-    if (!parentNodeElement) return null
-    return parentNodeElement
   }
 
   getKeyField(data) {
@@ -546,6 +552,7 @@ class TreeChart {
   }
 
   setEvent() {
+    this.windowEvent = []
     const { allowFold, draggable } = this
     allowFold && this.setFoldEvent()
     this.setClickHook()
@@ -592,24 +599,6 @@ class TreeChart {
       foldButton.classList.add('is-fold')
     }
     this.reloadLink()
-  }
-
-  getPreviousNode(target) {
-    try {
-      const node = isElement(target) ? target : this.getNodeElement(target)
-      return node.parentElement.previousElementSibling.querySelector('.tree-chart-node')
-    } catch (e) {
-      return null
-    }
-  }
-
-  getNextNode(target) {
-    try {
-      const node = isElement(target) ? target : this.getNodeElement(target)
-      return node.parentElement.nextElementSibling.querySelector('.tree-chart-node')
-    } catch (e) {
-      return null
-    }
   }
 
   getCurrentEventNode(target) {
@@ -668,12 +657,16 @@ class TreeChart {
     })
   }
 
-  // 绑定拖动事件
-  setDragEvent() {
-    const { ghostContainer, container, nodesContainer, hooks } = this
-    const { preventDrag, dragStart, dragEnd } = hooks
+  createNodeParams(nodeKey) {
+    return {
+      key: nodeKey,
+      parentKey: this.getParentKey(nodeKey),
+      previousKey: this.getPreviousKey(nodeKey),
+      nextKey: this.getNextKey(nodeKey)
+    }
+  }
 
-    let emitDragStart = true
+  initDragData() {
     this.dragData = {
       key: null,
       ghostElement: null,
@@ -683,6 +676,15 @@ class TreeChart {
       mouseDownOffsetX: 0,
       mouseDownOffsetY: 0
     }
+  }
+
+  // 绑定拖动事件
+  setDragEvent() {
+    const { ghostContainer, container, nodesContainer, hooks } = this
+    const { preventDrag, dragStart, dragEnd } = hooks
+    let emitDragStart = true
+
+    this.initDragData()
 
     nodesContainer.addEventListener('mousedown', e => {
       const { button, clientX, clientY } = e
@@ -738,62 +740,31 @@ class TreeChart {
       }
     })
 
-    const createParams = node => {
-      const nodeKey = this.getKeyByElement(node)
-      return {
-        parentKey: this.getParentKey(nodeKey),
-        parentNode: this.getParentNodeElement(nodeKey),
-        previousKey: this.getPreviousKey(node),
-        previousNode: this.getPreviousNode(node),
-        nextKey: this.getNextKey(node),
-        nextNode: this.getNextNode(node)
-      }
-    }
     nodesContainer.addEventListener('mouseup', e => {
       if (e.button !== 0) return
-      const { key } = this.dragData
       emitDragStart = true
       const targetNode = document.querySelector('.collide-node')
-      if (targetNode) {
-        const dragNode = this.getNodeElement(key)
-        let type = ''
-        if (targetNode.classList.contains('become-previous')) type = 'previous'
-        if (targetNode.classList.contains('become-next')) type = 'next'
-        if (targetNode.classList.contains('become-child')) type = 'child'
-        this.cancelDrag()
-        const from = createParams(dragNode)
-        this.insertNode(this.getKeyByElement(targetNode), this.getKeyByElement(dragNode), type)
-        // 如果目标节点是折叠状态，插入子节点后自动展开
-        if (type === 'child' && childrenIsFold(targetNode)) {
-          this.toggleNodeFold(this.getKeyByElement(targetNode))
-        }
-        dragEnd && dragEnd(
-          from,
-          createParams(dragNode),
-          { key, element: dragNode },
-          { key: this.getKeyByElement(targetNode), element: targetNode },
-          type)
-      }
+      if (!targetNode) return
+      const targetKey = this.getKeyByElement(targetNode)
+      const dragKey = this.dragData.key
+
+      let type = ''
+      if (targetNode.classList.contains('become-previous')) type = 'previous'
+      if (targetNode.classList.contains('become-next')) type = 'next'
+      if (targetNode.classList.contains('become-child')) type = 'child'
+
+      this.stopDrag()
+
+      const from = this.createNodeParams(dragKey)
+      this.insertNode(targetKey, dragKey, type)
+      const to = this.createNodeParams(dragKey)
+      // dragEnd-Hook
+      dragEnd && dragEnd({ from, to, target: targetKey, key: dragKey, type })
     })
 
-    const cancelDrag = () => {
-      const { key } = this.dragData
-      if (!key) return
-      nodesContainer.classList.remove('cursor-move')
-      ghostContainer.innerHTML = ''
-      this.dragData = {
-        key: null,
-        ghostElement: null,
-        ghostTranslateX: 0,
-        ghostTranslateY: 0,
-        mouseDownOffsetX: 0,
-        mouseDownOffsetY: 0
-      }
-      this.removeDragEffect()
-      this.stopFollowScroll()
-    }
-    this.cancelDrag = cancelDrag.bind(this)
-    window.addEventListener('mouseup', this.cancelDrag)
+    const mouseupHandler = this.stopDrag.bind(this)
+    this.windowEvent.push({ type: 'mouseup', handler: mouseupHandler })
+    window.addEventListener('mouseup', mouseupHandler)
 
     // 考虑滚动情况
     const oldScroll = {
@@ -811,6 +782,16 @@ class TreeChart {
       oldScroll.top = container.scrollTop
       oldScroll.left = container.scrollLeft
     })
+  }
+
+  stopDrag() {
+    const { dragData, nodesContainer, ghostContainer } = this
+    if (!dragData.key) return
+    nodesContainer.classList.remove('cursor-move')
+    ghostContainer.innerHTML = ''
+    this.initDragData()
+    this.removeDragEffect()
+    this.stopFollowScroll()
   }
 
   getGhostPosition() {
@@ -854,11 +835,11 @@ class TreeChart {
     } = this.positionData.node[coverNodeKey]
 
     // 拖到父节点时只能作为兄弟节点插入
-    const coverIsParent = coverNode === this.getParentNodeElement(dragNodeKey)
+    const coverIsParent = coverNodeKey === this.getParentKey(dragNodeKey)
     // 禁止插入到下一个兄弟节点的上面
-    const coverIsNext = coverNode === this.getNextNode(dragElement)
+    const coverIsNext = coverNodeKey === this.getNextKey(dragNodeKey)
     // 禁止插入到上一个兄弟节点的下面
-    const coverIsPrevious = coverNode === this.getPreviousNode(dragElement)
+    const coverIsPrevious = coverNodeKey === this.getPreviousKey(dragNodeKey)
 
     const allowConfig = {
       child: !coverNode.classList.contains('not-allow-insert-child') && !coverIsParent,
@@ -1194,16 +1175,20 @@ class TreeChart {
       container.scrollLeft = container.scrollLeft - e.movementX
       container.scrollTop = container.scrollTop - e.movementY
     })
-    this.cancelDragScroll = e => {
+    const mouseupHandler = e => {
       if (e.button !== 0) return
       lock = true
     }
-    window.addEventListener('mouseup', this.cancelDragScroll)
+    this.windowEvent.push({ type: 'mouseup', handler: mouseupHandler })
+    window.addEventListener('mouseup', mouseupHandler)
   }
 
   destroy() {
-    this.cancelDrag && window.removeEventListener('mouseup', this.cancelDrag)
-    this.cancelDragScroll && window.removeEventListener('mouseup', this.cancelDragScroll)
+    this.windowEvent.forEach(item => window.removeEventListener(item.type, item.handler))
+    this.container.innerHTML = ''
+    for (const key in this) {
+      this[key] = null
+    }
   }
 }
 
