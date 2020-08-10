@@ -92,7 +92,7 @@ class TreeChart {
       if (this.existChildren(targetKey)) {
         this.getChildrenContainer(targetKey).appendChild(originNodeContainer)
         // 如果目标节点是折叠状态，插入子节点后自动展开
-        this.nodeIsFold(targetKey) && this.toggleNodeFold(targetKey)
+        this.nodeIsFold(targetKey) && this.toggleFold(targetKey)
       } else {
         // 没有任何子节点的话创建一个容器
         const newChildrenContainer = this.createChildrenContainer()
@@ -135,6 +135,20 @@ class TreeChart {
 
   nodeIsFold(targetKey) {
     return this.getFoldButton(targetKey).classList.contains('is-fold')
+  }
+
+  toggleFold(targetKey) {
+    const foldButton = this.getFoldButton(targetKey)
+    if (!foldButton) return
+    const childNodeContainer = this.getChildrenContainer(targetKey)
+    if (this.nodeIsFold(targetKey)) {
+      childNodeContainer.classList.remove('is-hidden')
+      foldButton.classList.remove('is-fold')
+    } else {
+      childNodeContainer.classList.add('is-hidden')
+      foldButton.classList.add('is-fold')
+    }
+    this.reloadLink()
   }
 
   reRenderNode(targetKey, data) {
@@ -563,7 +577,7 @@ class TreeChart {
   setFoldEvent() {
     this.nodesContainer.addEventListener('click', ({ target }) => {
       if (!target.classList.contains('tree-chart-unfold')) return
-      this.toggleNodeFold(this.getKeyByElement(target.parentElement))
+      this.toggleFold(this.getKeyByElement(target.parentElement))
     })
   }
 
@@ -587,25 +601,12 @@ class TreeChart {
     link.setAttribute('d', `M${M} Q${Q1} ${Q2} T ${T}`)
   }
 
-  toggleNodeFold(targetKey) {
-    const foldButton = this.getFoldButton(targetKey)
-    if (!foldButton) return
-    const childNodeContainer = this.getChildrenContainer(targetKey)
-    if (this.nodeIsFold(targetKey)) {
-      childNodeContainer.classList.remove('is-hidden')
-      foldButton.classList.remove('is-fold')
-    } else {
-      childNodeContainer.classList.add('is-hidden')
-      foldButton.classList.add('is-fold')
-    }
-    this.reloadLink()
-  }
-
-  getCurrentEventNode(target) {
+  // 沿着事件触发路径向上找node节点
+  getCurrentEventNode(eventTarget) {
     const { nodesContainer } = this
     // 忽略展开按钮
-    if (target.classList.contains('tree-chart-unfold')) return null
-    let searchElement = target
+    if (eventTarget.classList.contains('tree-chart-unfold')) return null
+    let searchElement = eventTarget
     while (nodesContainer !== searchElement) {
       if (searchElement.classList.contains('tree-chart-node')) return searchElement
       searchElement = searchElement.parentElement
@@ -805,13 +806,14 @@ class TreeChart {
   }
 
   removeDragEffect() {
-    const tempLink = this.linkContainer.querySelector('.is-temp-line')
-    tempLink && this.linkContainer.removeChild(tempLink)
-    const collideNode = document.querySelector('.collide-node')
+    const { linkContainer, nodesContainer } = this
+    const tempLink = linkContainer.querySelector('.is-temp-line')
+    tempLink && linkContainer.removeChild(tempLink)
+    const collideNode = nodesContainer.querySelector('.collide-node')
     collideNode && collideNode.classList.remove('collide-node', 'become-previous', 'become-next', 'become-child')
-    const tempChildrenContainer = document.querySelector('.temp-children-container')
+    const tempChildrenContainer = nodesContainer.querySelector('.temp-children-container')
     tempChildrenContainer && tempChildrenContainer.parentElement.removeChild(tempChildrenContainer)
-    const notAllowEffect = document.querySelector('.show-not-allow')
+    const notAllowEffect = nodesContainer.querySelector('.show-not-allow')
     notAllowEffect && notAllowEffect.classList.remove('show-not-allow')
   }
 
