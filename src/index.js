@@ -683,6 +683,7 @@ class TreeChart {
   setDragEvent() {
     const { ghostContainer, container, nodesContainer, hooks } = this
     const { preventDrag, dragStart, dragEnd } = hooks
+    // 是否触发dragStart事件
     let emitDragStart = true
 
     this.initDragData()
@@ -767,21 +768,25 @@ class TreeChart {
     this.windowEvent.push({ type: 'mouseup', handler: mouseupHandler })
     window.addEventListener('mouseup', mouseupHandler)
 
-    // 考虑滚动情况
+    // 考虑拖拽过程中滚轮滚动情况
     const oldScroll = {
       top: container.scrollTop,
       left: container.scrollLeft
     }
     container.addEventListener('scroll', () => {
       const { key, ghostElement, ghostTranslateY: oldTranslateY, ghostTranslateX: oldTranslateX } = this.dragData
+      const { left: oldScrollLeft, top: oldScrollTop } = oldScroll
+      const { scrollLeft: currentScrollLeft, scrollTop: currentScrollTop } = container
+
       if (key && ghostElement) {
-        const ghostTranslateX = this.dragData.ghostTranslateX = oldTranslateX + container.scrollLeft - oldScroll.left
-        const ghostTranslateY = this.dragData.ghostTranslateY = oldTranslateY + container.scrollTop - oldScroll.top
+        const ghostTranslateX = oldTranslateX + currentScrollLeft - oldScrollLeft
+        const ghostTranslateY = oldTranslateY + currentScrollTop - oldScrollTop
         ghostElement.style.transform = `translate(${ghostTranslateX}px, ${ghostTranslateY}px)`
+        Object.assign(this.dragData, { ghostTranslateX, ghostTranslateY })
         this.setDragEffect(this.getGhostPosition())
       }
-      oldScroll.top = container.scrollTop
-      oldScroll.left = container.scrollLeft
+      oldScroll.left = currentScrollLeft
+      oldScroll.top = currentScrollTop
     })
   }
 
