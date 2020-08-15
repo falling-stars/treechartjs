@@ -4,6 +4,21 @@ const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && d
 const isNumber = data => /Number/.test(Object.prototype.toString.call(data))
 const childrenIsFold = node => Boolean(node.querySelector('.is-fold'))
 const setNotAllowEffect = node => node.classList.add('show-not-allow')
+const getArrayIntersection = (...arrays) => {
+  const arrayCount = arrays.length
+  if (arrayCount < 2) return []
+  const result = []
+  const countMap = {}
+  arrays.reduce((a, b) => a.concat(b), []).forEach(item => {
+    if (countMap[item]) {
+      countMap[item]++
+      countMap[item] === arrayCount && result.push(item)
+    } else {
+      countMap[item] = 1
+    }
+  })
+  return result
+}
 
 class TreeChart {
   /* API */
@@ -768,7 +783,7 @@ class TreeChart {
     this.windowEvent.push({ type: 'mouseup', handler: mouseupHandler })
     window.addEventListener('mouseup', mouseupHandler)
 
-    // 考虑拖拽过程中滚轮滚动情况
+    // 处理拖拽过程中滚动的情况
     const oldScroll = {
       top: container.scrollTop,
       left: container.scrollLeft
@@ -823,17 +838,19 @@ class TreeChart {
   }
 
   // 生成拖动效果
-  createDragEffect(coverNode, { top: ghostTop, bottom: ghostBottom }) {
+  createDragEffect(collideNodeKey, { top: ghostTop, bottom: ghostBottom }) {
     let insertType = ''
     let from = null
     let to = null
 
     const { key: dragNodeKey } = this.dragData
     const dragElement = this.getNodeElement(dragNodeKey)
-    // 不可拖到子节点上
-    if (dragElement.parentElement.contains(coverNode)) return setNotAllowEffect(coverNode)
+    const collideNode = this.getNodeElement(collideNodeKey)
 
-    const coverNodeKey = this.getKeyByElement(coverNode)
+    // 不可拖到子节点上
+    if (dragElement.parentElement.contains(collideNode)) return setNotAllowEffect(collideNode)
+
+    const coverNodeKey = this.getKeyByElement(collideNode)
     const {
       top: coverNodeTop,
       bottom: coverNodeBottom,
@@ -849,9 +866,9 @@ class TreeChart {
     const coverIsPrevious = coverNodeKey === this.getPreviousKey(dragNodeKey)
 
     const allowConfig = {
-      child: !coverNode.classList.contains('not-allow-insert-child') && !coverIsParent,
-      next: !coverNode.classList.contains('not-allow-insert-next') && !coverIsPrevious,
-      previous: !coverNode.classList.contains('not-allow-insert-previous') && !coverIsNext
+      child: !collideNode.classList.contains('not-allow-insert-child') && !coverIsParent,
+      next: !collideNode.classList.contains('not-allow-insert-next') && !coverIsPrevious,
+      previous: !collideNode.classList.contains('not-allow-insert-previous') && !coverIsNext
     }
 
     let existAllow = false
@@ -861,11 +878,11 @@ class TreeChart {
         break
       }
     }
-    if (!existAllow) return setNotAllowEffect(coverNode)
+    if (!existAllow) return setNotAllowEffect(collideNode)
 
     // 如果被覆盖的是根节点的话只允许作为子节点插入
-    if (coverNode === this.rootNode) {
-      if (!allowConfig.child) return setNotAllowEffect(coverNode)
+    if (collideNode === this.rootNode) {
+      if (!allowConfig.child) return setNotAllowEffect(collideNode)
       insertType = 'child'
     } else {
       // 位置偏上或者偏下(45%)则认为是添加兄弟节点
@@ -895,12 +912,12 @@ class TreeChart {
         }
       }
 
-      if (insertType === '') return setNotAllowEffect(coverNode)
+      if (insertType === '') return setNotAllowEffect(collideNode)
     }
-    coverNode.classList.add(`become-${insertType}`, 'collide-node')
+    collideNode.classList.add(`become-${insertType}`, 'collide-node')
 
     if (insertType === 'previous' || insertType === 'next') {
-      const parentNodeKey = this.getParentKey(this.getKeyByElement(coverNode))
+      const parentNodeKey = this.getParentKey(this.getKeyByElement(collideNode))
       const parentPosition = this.positionData.node[parentNodeKey]
       from = {
         x: parentPosition.right,
@@ -925,7 +942,7 @@ class TreeChart {
 
         const childrenContainer = this.createChildrenContainer('temp-children-container')
         childrenContainer.appendChild(chartContainer)
-        coverNode.parentElement.appendChild(childrenContainer)
+        collideNode.parentElement.appendChild(childrenContainer)
 
         to = {
           x: coverNodeRight + this.option.distanceX,
@@ -939,12 +956,12 @@ class TreeChart {
         key: coverNodeKey
       }
       // 有子节点的情况
-      if (coverNode.nextElementSibling) {
+      if (collideNode.nextElementSibling) {
         // 拖到收起状态的节点需要创建临时节点
-        if (childrenIsFold(coverNode)) {
+        if (childrenIsFold(collideNode)) {
           createTempChildNode()
         } else {
-          const childNodeList = coverNode.nextElementSibling.childNodes
+          const childNodeList = collideNode.nextElementSibling.childNodes
           const insertPreviousKey = this.getKeyByElement(childNodeList[childNodeList.length - 1].querySelector('.tree-chart-node'))
           const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData.node[insertPreviousKey]
           to = {
@@ -963,7 +980,7 @@ class TreeChart {
   }
 
   // 获取拖动过程中碰撞的元素
-  getCollideNode({ left, right, top, bottom }) {
+  getCollideNode({ left: ghostLeft, right: ghostRight, top: ghostTop, bottom: ghostBottom }) {
     const { key: draggingKey } = this.dragData
     const {
       left: positionLeft,
@@ -972,16 +989,6 @@ class TreeChart {
       bottom: positionBottom,
       node: nodePosition
     } = this.positionData
-
-    const getRangeList = (flagItem, data, direct = 'after') => {
-      let result = []
-      isNumber(flagItem) && data.sortList.forEach(item => {
-        if (direct === 'before' ? item <= flagItem : item >= flagItem) {
-          result = result.concat(data[item])
-        }
-      })
-      return result
-    }
 
     // 寻找符合条件最近的位置
     const searchCurrentPosition = (target, sortList, searchLarge) => {
@@ -997,82 +1004,56 @@ class TreeChart {
       }
       return null
     }
-    const currentLeft = searchCurrentPosition(left, positionRight.sortList, true)
-    const currentTop = searchCurrentPosition(top, positionBottom.sortList, true)
-    const currentRight = searchCurrentPosition(right, positionLeft.sortList)
-    const currentBottom = searchCurrentPosition(bottom, positionTop.sortList)
+    const currentLeft = searchCurrentPosition(ghostLeft, positionRight.sortList, true)
+    const currentTop = searchCurrentPosition(ghostTop, positionBottom.sortList, true)
+    const currentRight = searchCurrentPosition(ghostRight, positionLeft.sortList)
+    const currentBottom = searchCurrentPosition(ghostBottom, positionTop.sortList)
 
-    const leftTopCollide = []
-    const rightBottomCollide = []
-
-    // 左顶点和上顶点求交集确定在右下方的元素
-    const leftCatchList = getRangeList(currentLeft, positionRight)
-    const topCatchList = getRangeList(currentTop, positionBottom)
-    leftCatchList.forEach(item => {
-      if (item !== draggingKey && topCatchList.includes(item)) {
-        leftTopCollide.push(item)
-      }
-    })
-
-    // 右顶点和下顶点求交集确定在左上方的元素
-    const rightCatchList = getRangeList(currentRight, positionLeft, 'before')
-    const bottomCatchList = getRangeList(currentBottom, positionTop, 'before')
-    rightCatchList.forEach(item => {
-      if (item !== draggingKey && bottomCatchList.includes(item)) {
-        rightBottomCollide.push(item)
-      }
-    })
-
-    // 两个区间求交集确定目标元素
-    const collideNode = []
-    leftTopCollide.forEach(nodeKey => {
-      if (!rightBottomCollide.includes(nodeKey)) return
-      const node = this.getNodeElement(nodeKey)
-      collideNode.push({ node, key: nodeKey, position: nodePosition[nodeKey] })
-    })
-
-    if (!collideNode.length) return null
-    if (collideNode.length === 1) return collideNode[0].node
-
-    // 如果存在多个被覆盖的节点需要根据覆盖面积决策，被覆盖的节点最多有四个
-    const isLeft = position => position.left <= left
-    const isTop = position => position.top <= top
-
-    // 面积计算
-    const setArea = (type, item) => {
-      const collidePosition = item.position
-      switch (type) {
-        case 'leftTop':
-          item.area = (collidePosition.right - left) * (collidePosition.bottom - top)
-          break
-        case 'leftBottom':
-          item.area = (collidePosition.right - left) * (bottom - collidePosition.top)
-          break
-        case 'rightTop':
-          item.area = (right - collidePosition.left) * (collidePosition.bottom - top)
-          break
-        case 'rightBottom':
-          item.area = (right - collidePosition.left) * (bottom - collidePosition.top)
-      }
+    // 寻找交叉范围内的节点
+    const getRangeList = (markValue, directPositionList, searchLarge) => {
+      let result = []
+      isNumber(markValue) && directPositionList.sortList.forEach(positionValue => {
+        if (searchLarge ? positionValue >= markValue : positionValue <= markValue) {
+          result = result.concat(directPositionList[positionValue])
+        }
+      })
+      return result
     }
-    collideNode.forEach(item => {
-      const itemPosition = item.position
-      if (isLeft(itemPosition)) {
-        setArea(isTop(itemPosition) ? 'leftTop' : 'leftBottom', item)
-        // 左侧
-      } else {
-        // 右侧
-        setArea(isTop(itemPosition) ? 'rightTop' : 'rightBottom', item)
-      }
+    // 根据ghost节点左边界和上边界求交集确定在右下方的元素
+    const leftCatchNodes = getRangeList(currentLeft, positionRight, true)
+    const topCatchNodes = getRangeList(currentTop, positionBottom, true)
+    // 根据ghost节点右边界和下边界求交集确定在左上方的元素
+    const rightCatchNodes = getRangeList(currentRight, positionLeft)
+    const bottomCatchNodes = getRangeList(currentBottom, positionTop)
+
+    // 四个区间求交集确定目标元素
+    const collideNodes = getArrayIntersection(leftCatchNodes, topCatchNodes, rightCatchNodes, bottomCatchNodes)
+    // 忽略自身
+    const draggingNodeIndex = collideNodes.indexOf(draggingKey)
+    draggingNodeIndex > -1 && collideNodes.splice(draggingNodeIndex, 1)
+
+    if (!collideNodes.length) return null
+    if (collideNodes.length === 1) return collideNodes[0]
+
+    // 如果存在多个被覆盖的节点需要根据覆盖面积决策，取覆盖面最大的节点
+    const maxAreaNode = { nodeKey: '', nodeArea: 0 }
+    const getArea = nodeKey => {
+      const { left: nodeLeft, right: nodeRight, top: nodeTop, bottom: nodeBottom } = nodePosition[nodeKey]
+      const x = nodeLeft <= ghostLeft ? nodeRight - ghostLeft : ghostRight - nodeLeft
+      const y = nodeTop <= ghostTop ? nodeBottom - ghostTop : ghostBottom - nodeTop
+      return x * y
+    }
+    collideNodes.forEach(nodeKey => {
+      const nodeArea = getArea(nodeKey)
+      nodeArea > maxAreaNode.nodeArea && Object.assign(maxAreaNode, { nodeKey, nodeArea })
     })
-    collideNode.sort((a, b) => b.area - a.area)
-    return collideNode[0].node
+    return maxAreaNode.nodeKey
   }
 
   setDragEffect(ghostElementPosition) {
     this.removeDragEffect()
-    const collideNode = this.getCollideNode(ghostElementPosition)
-    collideNode && this.createDragEffect(collideNode, ghostElementPosition)
+    const collideNodeKey = this.getCollideNode(ghostElementPosition)
+    collideNodeKey && this.createDragEffect(collideNodeKey, ghostElementPosition)
   }
 
   resize() {
