@@ -355,11 +355,11 @@ class TreeChart {
     return nodeContainer
   }
 
-  createNodeContainer() {
+  createNodeContainer(isTemp) {
     const { distanceY } = this.option
     const nodeContainer = document.createElement('div')
     nodeContainer.classList.add('tree-chart-container')
-    nodeContainer.style.marginBottom = `${distanceY}px`
+    if (!isTemp) nodeContainer.style.marginBottom = `${distanceY}px`
     return nodeContainer
   }
 
@@ -839,31 +839,30 @@ class TreeChart {
 
   // 生成拖动效果
   createDragEffect(collideNodeKey, { top: ghostTop, bottom: ghostBottom }) {
+    const { key: dragNodeKey } = this.dragData
     let insertType = ''
     let from = null
     let to = null
 
-    const { key: dragNodeKey } = this.dragData
-    const dragElement = this.getNodeElement(dragNodeKey)
+    const dragNode = this.getNodeElement(dragNodeKey)
     const collideNode = this.getNodeElement(collideNodeKey)
 
     // 不可拖到子节点上
-    if (dragElement.parentElement.contains(collideNode)) return setNotAllowEffect(collideNode)
+    if (dragNode.parentElement.contains(collideNode)) return setNotAllowEffect(collideNode)
 
-    const coverNodeKey = this.getKeyByElement(collideNode)
     const {
-      top: coverNodeTop,
-      bottom: coverNodeBottom,
-      left: coverNodeLeft,
-      right: coverNodeRight
-    } = this.positionData.node[coverNodeKey]
+      top: collideNodeTop,
+      bottom: collideNodeBottom,
+      left: collideNodeLeft,
+      right: collideNodeRight
+    } = this.positionData.node[collideNodeKey]
 
     // 拖到父节点时只能作为兄弟节点插入
-    const coverIsParent = coverNodeKey === this.getParentKey(dragNodeKey)
+    const coverIsParent = collideNodeKey === this.getParentKey(dragNodeKey)
     // 禁止插入到下一个兄弟节点的上面
-    const coverIsNext = coverNodeKey === this.getNextKey(dragNodeKey)
+    const coverIsNext = collideNodeKey === this.getNextKey(dragNodeKey)
     // 禁止插入到上一个兄弟节点的下面
-    const coverIsPrevious = coverNodeKey === this.getPreviousKey(dragNodeKey)
+    const coverIsPrevious = collideNodeKey === this.getPreviousKey(dragNodeKey)
 
     const allowConfig = {
       child: !collideNode.classList.contains('not-allow-insert-child') && !coverIsParent,
@@ -871,6 +870,7 @@ class TreeChart {
       previous: !collideNode.classList.contains('not-allow-insert-previous') && !coverIsNext
     }
 
+    // 如果无法以任何类型插入节点的话显示禁止图标
     let existAllow = false
     for (const key in allowConfig) {
       if (allowConfig[key]) {
@@ -886,9 +886,9 @@ class TreeChart {
       insertType = 'child'
     } else {
       // 位置偏上或者偏下(45%)则认为是添加兄弟节点
-      const offsetValue = (coverNodeBottom - coverNodeTop) * 0.45
-      const topPositionValue = coverNodeTop + offsetValue
-      const bottomPositionValue = coverNodeBottom - offsetValue
+      const offsetValue = (collideNodeBottom - collideNodeTop) * 0.45
+      const topPositionValue = collideNodeTop + offsetValue
+      const bottomPositionValue = collideNodeBottom - offsetValue
 
       if (ghostBottom <= topPositionValue) {
         // 在上方插入
@@ -917,7 +917,7 @@ class TreeChart {
     collideNode.classList.add(`become-${insertType}`, 'collide-node')
 
     if (insertType === 'previous' || insertType === 'next') {
-      const parentNodeKey = this.getParentKey(this.getKeyByElement(collideNode))
+      const parentNodeKey = this.getParentKey(collideNodeKey)
       const parentPosition = this.positionData.node[parentNodeKey]
       from = {
         x: parentPosition.right,
@@ -925,44 +925,41 @@ class TreeChart {
         key: parentNodeKey
       }
       to = {
-        x: coverNodeLeft,
-        y: insertType === 'previous' ? coverNodeTop - 20 : coverNodeBottom + 20,
+        x: collideNodeLeft,
+        y: insertType === 'previous' ? collideNodeTop - 20 : collideNodeBottom + 20,
         key: 'temp'
       }
     } else {
       const createTempChildNode = () => {
         const chartContent = document.createElement('div')
         chartContent.classList.add('tree-chart-node', 'temp-chart-content')
-        chartContent.style.width = `${coverNodeRight - coverNodeLeft}px`
-        chartContent.style.height = `${coverNodeBottom - coverNodeTop}px`
-
-        const chartContainer = document.createElement('div')
-        chartContainer.classList.add('tree-chart-container')
-        chartContainer.appendChild(chartContent)
+        chartContent.style.width = `${collideNodeRight - collideNodeLeft}px`
+        chartContent.style.height = `${collideNodeBottom - collideNodeTop}px`
 
         const childrenContainer = this.createChildrenContainer('temp-children-container')
+        const chartContainer = this.createNodeContainer(true)
+        chartContainer.appendChild(chartContent)
         childrenContainer.appendChild(chartContainer)
         collideNode.parentElement.appendChild(childrenContainer)
 
         to = {
-          x: coverNodeRight + this.option.distanceX,
-          y: (coverNodeTop + coverNodeBottom) / 2,
+          x: collideNodeRight + this.option.distanceX,
+          y: (collideNodeTop + collideNodeBottom) / 2,
           key: 'temp'
         }
       }
       from = {
-        x: coverNodeRight,
-        y: (coverNodeTop + coverNodeBottom) / 2,
-        key: coverNodeKey
+        x: collideNodeRight,
+        y: (collideNodeTop + collideNodeBottom) / 2,
+        key: collideNodeKey
       }
       // 有子节点的情况
-      if (collideNode.nextElementSibling) {
+      if (this.existChildren(collideNodeKey)) {
         // 拖到收起状态的节点需要创建临时节点
         if (childrenIsFold(collideNode)) {
           createTempChildNode()
         } else {
-          const childNodeList = collideNode.nextElementSibling.childNodes
-          const insertPreviousKey = this.getKeyByElement(childNodeList[childNodeList.length - 1].querySelector('.tree-chart-node'))
+          const insertPreviousKey = this.getChildrenKeys(collideNodeKey).pop()
           const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData.node[insertPreviousKey]
           to = {
             x: childPreviousLeft,
@@ -1080,24 +1077,22 @@ class TreeChart {
   }
 
   followScroll({ left, top, right, bottom }) {
-    if (!this.dragScroll) return
-    const container = this.container
+    const { dragScroll, container, option } = this
+    if (!dragScroll) return
+
     const { scrollLeft, scrollTop, clientWidth, clientHeight, scrollWidth, scrollHeight } = container
-    const distance = this.option.scrollTriggerDistance
+    const distance = option.scrollTriggerDistance
+    const existRightContent = scrollWidth - scrollLeft > clientWidth
+    const existBottomContent = scrollHeight - scrollTop > clientHeight
+
     let direct = ''
-    const hasRightContent = scrollWidth - scrollLeft > clientWidth
-    const hasBottomContent = scrollHeight - scrollTop > clientHeight
-    if (scrollLeft > 0 && left < scrollLeft + distance) {
-      direct = 'Left'
-    } else if (scrollTop > 0 && top < scrollTop + distance) {
-      direct = 'Top'
-    } else if (hasRightContent && clientWidth + scrollLeft - distance < right) {
-      direct = 'Right'
-    } else if (hasBottomContent && clientHeight + scrollTop - distance < bottom) {
-      direct = 'Bottom'
-    } else {
-      return this.stopFollowScroll()
-    }
+    // 确定滚动方向，有可能同时满足不同的条件
+    if (scrollLeft > 0 && left < scrollLeft + distance) direct = 'Left'
+    if (!direct && scrollTop > 0 && top < scrollTop + distance) direct = 'Top'
+    if (!direct && existRightContent && clientWidth + scrollLeft - distance < right) direct = 'Right'
+    if (!direct && existBottomContent && clientHeight + scrollTop - distance < bottom) direct = 'Bottom'
+    if (!direct) return this.stopFollowScroll()
+
     if (this.foolowScrollData.direct !== direct) {
       this.stopFollowScroll(false)
       this.foolowScrollData.direct = direct

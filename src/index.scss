@@ -4,6 +4,7 @@
   overflow: auto;
   position: relative;
   .is-nodes-container {
+    box-sizing: border-box;
     position: relative;
     z-index: 2;
     min-height: 100%;

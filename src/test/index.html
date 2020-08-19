@@ -11,7 +11,11 @@
             overflow: hidden;
         }
         .button-container {
-            padding-top: 10px;
+            padding: 10px 0;
+            white-space: nowrap;
+            overflow-x: auto;
+            height: 58px;
+            box-sizing: border-box;
         }
         button {
             cursor: pointer;
@@ -26,6 +30,11 @@
         button:hover {
             color: white;
             background-color: #409eff;
+        }
+        #demo {
+            width: 100vw;
+            height: calc(100vh - 58px);
+            overflow: auto;
         }
     </style>
 </head>
