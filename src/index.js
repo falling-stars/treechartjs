@@ -220,6 +220,12 @@ class TreeChart {
 
   /* == */
 
+  registerWindowEvent(eventType, handler) {
+    const handlerFunction = handler.bind(this)
+    this.windowEvent.push({ type: eventType, handler: handlerFunction })
+    window.addEventListener('mouseup', handlerFunction)
+  }
+
   addChildrenKey(targetKey, newKey) {
     const targetNodeElement = this.getNodeElement(targetKey)
     const childrenKeys = targetNodeElement.getAttribute('data-children') || ''
@@ -582,11 +588,11 @@ class TreeChart {
 
   setEvent() {
     this.windowEvent = []
-    const { allowFold, draggable } = this
+    const { allowFold, draggable, dragScroll } = this
     allowFold && this.setFoldEvent()
     this.setClickHook()
     draggable && this.setDragEvent()
-    this.setDragScroll()
+    dragScroll && this.setDragScroll()
   }
 
   setFoldEvent() {
@@ -692,6 +698,10 @@ class TreeChart {
       mouseDownOffsetX: 0,
       mouseDownOffsetY: 0
     }
+    this.followScrollData = {
+      interval: null,
+      direct: ''
+    }
   }
 
   // 绑定拖动事件
@@ -757,31 +767,38 @@ class TreeChart {
       }
     })
 
-    nodesContainer.addEventListener('mouseup', e => {
-      if (e.button !== 0) return
+    this.registerWindowEvent('mouseup', e => {
       emitDragStart = true
-      const targetNode = document.querySelector('.collide-node')
-      if (!targetNode) return
-      const targetKey = this.getKeyByElement(targetNode)
-      const dragKey = this.dragData.key
+      const { dragData, nodesContainer, ghostContainer } = this
 
+      let targetKey = ''
       let type = ''
-      if (targetNode.classList.contains('become-previous')) type = 'previous'
-      if (targetNode.classList.contains('become-next')) type = 'next'
-      if (targetNode.classList.contains('become-child')) type = 'child'
+      const dragKey = dragData.key
+      if (!dragKey) return
 
-      this.stopDrag()
+      const targetNode = nodesContainer.querySelector('.collide-node')
+      if (targetNode) {
+        targetKey = this.getKeyByElement(targetNode)
+        if (targetNode.classList.contains('become-previous')) type = 'previous'
+        if (targetNode.classList.contains('become-next')) type = 'next'
+        if (targetNode.classList.contains('become-child')) type = 'child'
+      }
 
-      const from = this.createNodeParams(dragKey)
-      this.insertNode(targetKey, dragKey, type)
-      const to = this.createNodeParams(dragKey)
-      // dragEnd-Hook
-      dragEnd && dragEnd({ from, to, target: targetKey, key: dragKey, type })
+      // 停止拖动，移除拖动效果
+      this.stopFollowScroll()
+      nodesContainer.classList.remove('cursor-move')
+      ghostContainer.innerHTML = ''
+      this.removeDragEffect()
+      this.initDragData()
+
+      if (targetNode) {
+        const from = this.createNodeParams(dragKey)
+        this.insertNode(targetKey, dragKey, type)
+        const to = this.createNodeParams(dragKey)
+        // emit dragEndHook
+        dragEnd && dragEnd({ from, to, target: targetKey, key: dragKey, type })
+      }
     })
-
-    const mouseupHandler = this.stopDrag.bind(this)
-    this.windowEvent.push({ type: 'mouseup', handler: mouseupHandler })
-    window.addEventListener('mouseup', mouseupHandler)
 
     // 处理拖拽过程中滚动的情况
     const oldScroll = {
@@ -803,16 +820,6 @@ class TreeChart {
       oldScroll.left = currentScrollLeft
       oldScroll.top = currentScrollTop
     })
-  }
-
-  stopDrag() {
-    const { dragData, nodesContainer, ghostContainer } = this
-    if (!dragData.key) return
-    nodesContainer.classList.remove('cursor-move')
-    ghostContainer.innerHTML = ''
-    this.initDragData()
-    this.removeDragEffect()
-    this.stopFollowScroll()
   }
 
   getGhostPosition() {
@@ -1077,8 +1084,7 @@ class TreeChart {
   }
 
   followScroll({ left, top, right, bottom }) {
-    const { dragScroll, container, option } = this
-    if (!dragScroll) return
+    const { container, option } = this
 
     const { scrollLeft, scrollTop, clientWidth, clientHeight, scrollWidth, scrollHeight } = container
     const distance = option.scrollTriggerDistance
@@ -1093,11 +1099,11 @@ class TreeChart {
     if (!direct && existBottomContent && clientHeight + scrollTop - distance < bottom) direct = 'Bottom'
     if (!direct) return this.stopFollowScroll()
 
-    if (this.foolowScrollData.direct !== direct) {
-      this.stopFollowScroll(false)
-      this.foolowScrollData.direct = direct
+    if (this.followScrollData.direct !== direct) {
+      this.stopFollowScroll()
+      this.followScrollData.direct = direct
       const scrollSpeed = this.option.scrollSpeed
-      this.foolowScrollData.interval = setInterval(() => {
+      this.followScrollData.interval = setInterval(() => {
         if (direct === 'Left' || direct === 'Top') {
           container[`scroll${direct}`] -= scrollSpeed
         } else {
@@ -1126,16 +1132,14 @@ class TreeChart {
     }
   }
 
-  stopFollowScroll(clearDirect = true) {
-    if (!this.dragScroll) return
-    this.foolowScrollData.interval && clearInterval(this.foolowScrollData.interval)
-    if (clearDirect) this.foolowScrollData.direct = ''
+  stopFollowScroll() {
+    const { interval } = this.followScrollData
+    interval && clearInterval(interval)
+    this.followScrollData.direct = ''
   }
 
   setDragScroll() {
-    const { dragScroll, container, nodesContainer } = this
-    if (!dragScroll) return
-    this.foolowScrollData = { interval: null, direct: '' }
+    const { container, nodesContainer } = this
     let lock = true
 
     const getEventNode = target => {
@@ -1158,12 +1162,10 @@ class TreeChart {
       container.scrollLeft = container.scrollLeft - e.movementX
       container.scrollTop = container.scrollTop - e.movementY
     })
-    const mouseupHandler = e => {
+    this.registerWindowEvent('mouseup', e => {
       if (e.button !== 0) return
       lock = true
-    }
-    this.windowEvent.push({ type: 'mouseup', handler: mouseupHandler })
-    window.addEventListener('mouseup', mouseupHandler)
+    })
   }
 
   destroy() {
