@@ -3,6 +3,16 @@
   height: 100%;
   overflow: auto;
   position: relative;
+  &.is-vertical {
+    .tree-chart-children-container {
+      display: block;
+    }
+    .tree-chart-container {
+      vertical-align: top;
+      display: inline-block !important;
+      text-align: center;
+    }
+  }
   .is-nodes-container {
     box-sizing: border-box;
     position: relative;
@@ -36,6 +46,11 @@
     position: relative;
     display: inline-block;
     vertical-align: middle;
+    width: auto;
+  }
+  .tree-render-container {
+    display: inline-block;
+    width: auto;
   }
   .become-previous {
     box-shadow: 0 0 2px 2px #ff9a36;

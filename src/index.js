@@ -255,10 +255,11 @@ class TreeChart {
   }
 
   createChildrenContainer(className) {
+    const { isVertical } = this
     const container = document.createElement('div')
     container.classList.add('tree-chart-children-container')
     className && container.classList.add(className)
-    container.style.marginLeft = `${this.option.distanceX}px`
+    if (!isVertical) container.style.marginLeft = `${this.option.distanceX}px`
     return container
   }
 
@@ -293,7 +294,8 @@ class TreeChart {
       scrollTriggerDistance: 50, // 触发滚动的距离
       smooth: 50, // 光滑程度(0-100，100为直线)
       scrollSpeed: 8, // 滚动速度
-      extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向)
+      extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向),
+      isVertical: false,
       ...data
     }
     option.padding = {
@@ -303,10 +305,11 @@ class TreeChart {
       left: 30,
       ...option.padding
     }
-    const { draggable, allowFold, dragScroll } = option
+    const { draggable, allowFold, dragScroll, isVertical } = option
     this.draggable = draggable
     this.allowFold = allowFold
     this.dragScroll = dragScroll
+    this.isVertical = isVertical
     this.option = option
     this.initHooks()
   }
@@ -332,8 +335,9 @@ class TreeChart {
   }
 
   createChartElement() {
-    const { container, data } = this.option
+    const { container, data, isVertical } = this.option
     container.classList.add('tree-chart')
+    isVertical && container.classList.add('is-vertical')
     this.container = container
     this.createNodes(data, this.createNodesContainer())
     this.createLinkContainer()
@@ -362,7 +366,8 @@ class TreeChart {
   }
 
   createNodeContainer(isTemp) {
-    const { distanceY } = this.option
+    const { isVertical, option } = this
+    const { distanceY } = option
     const nodeContainer = document.createElement('div')
     nodeContainer.classList.add('tree-chart-container')
     if (!isTemp) nodeContainer.style.marginBottom = `${distanceY}px`
@@ -398,13 +403,18 @@ class TreeChart {
   }
 
   createNode(data) {
-    const { draggable, hooks } = this
+    const { draggable, hooks, option, isVertical } = this
+    const { distanceX, distanceY } = option
     const { contentRender, dragControl } = hooks
 
     const node = document.createElement('div')
     const key = this.getKeyField(data)
     node.classList.add('tree-chart-node', `tree-chart-item-${key}`)
     node.setAttribute('data-key', key)
+    if (isVertical) {
+      node.style.marginTop = `${distanceY}px`
+      node.style.marginRight = `${distanceX}px`
+    }
 
     const renderContainer = document.createElement('div')
     renderContainer.classList.add('tree-render-container')
