@@ -3,16 +3,6 @@
   height: 100%;
   overflow: auto;
   position: relative;
-  &.is-vertical {
-    .tree-chart-children-container {
-      display: block;
-    }
-    .tree-chart-container {
-      vertical-align: top;
-      display: inline-block !important;
-      text-align: center;
-    }
-  }
   .is-nodes-container {
     box-sizing: border-box;
     position: relative;
@@ -27,7 +17,7 @@
     vertical-align: middle;
     display: inline-block;
     &.is-hidden {
-      display: none;
+      display: none !important;
     }
     > .tree-chart-container {
       display: block;
@@ -217,6 +207,23 @@
           display: block;
         }
       }
+    }
+  }
+  &.is-vertical {
+    .tree-chart-children-container {
+      display: block;
+    }
+    .tree-chart-container {
+      vertical-align: top;
+      display: inline-block !important;
+      text-align: center;
+    }
+    .is-nodes-container {
+      text-align: left;
+    }
+    .tree-chart-unfold {
+      right: calc(50% - 6px);
+      top: 100%;
     }
   }
 }

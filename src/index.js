@@ -255,11 +255,9 @@ class TreeChart {
   }
 
   createChildrenContainer(className) {
-    const { isVertical } = this
     const container = document.createElement('div')
     container.classList.add('tree-chart-children-container')
     className && container.classList.add(className)
-    if (!isVertical) container.style.marginLeft = `${this.option.distanceX}px`
     return container
   }
 
@@ -335,7 +333,8 @@ class TreeChart {
   }
 
   createChartElement() {
-    const { container, data, isVertical } = this.option
+    const { isVertical } = this
+    const { container, data } = this.option
     container.classList.add('tree-chart')
     isVertical && container.classList.add('is-vertical')
     this.container = container
@@ -365,12 +364,9 @@ class TreeChart {
     return nodeContainer
   }
 
-  createNodeContainer(isTemp) {
-    const { isVertical, option } = this
-    const { distanceY } = option
+  createNodeContainer() {
     const nodeContainer = document.createElement('div')
     nodeContainer.classList.add('tree-chart-container')
-    if (!isTemp) nodeContainer.style.marginBottom = `${distanceY}px`
     return nodeContainer
   }
 
@@ -403,7 +399,7 @@ class TreeChart {
   }
 
   createNode(data) {
-    const { draggable, hooks, option, isVertical } = this
+    const { draggable, hooks, option } = this
     const { distanceX, distanceY } = option
     const { contentRender, dragControl } = hooks
 
@@ -411,10 +407,8 @@ class TreeChart {
     const key = this.getKeyField(data)
     node.classList.add('tree-chart-node', `tree-chart-item-${key}`)
     node.setAttribute('data-key', key)
-    if (isVertical) {
-      node.style.marginTop = `${distanceY}px`
-      node.style.marginRight = `${distanceX}px`
-    }
+    node.style.marginBottom = `${distanceY}px`
+    node.style.marginRight = `${distanceX}px`
 
     const renderContainer = document.createElement('div')
     renderContainer.classList.add('tree-render-container')
@@ -493,7 +487,7 @@ class TreeChart {
 
   // 根据节点间父子关系生成连线信息，同时生成节点位置数据
   createLink() {
-    const { container, nodesContainer, linkContainer, draggable } = this
+    const { container, nodesContainer, linkContainer, draggable, isVertical } = this
     const { left: containerLeft, top: containerTop } = container.getBoundingClientRect()
     const { scrollLeft, scrollTop } = container
 
@@ -508,16 +502,17 @@ class TreeChart {
       // 忽略收起状态的节点
       if (childrenKeys && !childrenNodeContainer.classList.contains('is-hidden')) {
         const from = {
-          x: nodeLeft - containerLeft + nodeElement.offsetWidth + scrollLeft,
-          y: nodeTop - containerTop + nodeElement.offsetHeight / 2 + scrollTop,
+          x: nodeLeft - containerLeft + scrollLeft + (isVertical ? nodeElement.offsetWidth / 2 : nodeElement.offsetWidth),
+          y: nodeTop - containerTop + scrollTop + (isVertical ? nodeElement.offsetHeight : nodeElement.offsetHeight / 2),
           key: nodeKey
         }
         childrenKeys.split(',').forEach(childNodeKey => {
-          const childrenElement = this.getNodeElement(childNodeKey)
-          const childrenLayout = childrenElement.getBoundingClientRect()
+          const childElement = this.getNodeElement(childNodeKey)
+          const { left: childElementLeft, top: childElementTop } = childElement.getBoundingClientRect()
+          const { offsetWidth: childElementWidth, offsetHeight: childElementHeight } = childElement
           const to = {
-            x: childrenLayout.left - containerLeft + scrollLeft,
-            y: childrenLayout.top - containerTop + childrenElement.offsetHeight / 2 + scrollTop,
+            x: childElementLeft - containerLeft + scrollLeft + (isVertical ? childElementWidth / 2 : 0),
+            y: childElementTop - containerTop + scrollTop + (isVertical ? 0 : childElement.offsetHeight / 2),
             key: childNodeKey
           }
           this.drawLine(from, to)
@@ -738,9 +733,11 @@ class TreeChart {
 
       // 保存偏移量等
       const { left: nodePositionLeft, top: nodePositionTop } = this.positionData.node[dragNodeKey]
+      const ghostElement = dragNode.cloneNode(true)
+      ghostElement.style.margin = '0px'
       Object.assign(this.dragData, {
         key: dragNodeKey,
-        ghostElement: dragNode.cloneNode(true),
+        ghostElement,
         mouseDownOffsetX: clientX + container.scrollLeft - nodePositionLeft,
         mouseDownOffsetY: clientY + container.scrollTop - nodePositionTop
       })
@@ -952,6 +949,7 @@ class TreeChart {
         chartContent.classList.add('tree-chart-node', 'temp-chart-content')
         chartContent.style.width = `${collideNodeRight - collideNodeLeft}px`
         chartContent.style.height = `${collideNodeBottom - collideNodeTop}px`
+        chartContent.style.marginBottom = `${this.option.distanceY}px`
 
         const childrenContainer = this.createChildrenContainer('temp-children-container')
         const chartContainer = this.createNodeContainer(true)
