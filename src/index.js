@@ -609,7 +609,9 @@ class TreeChart {
 
   // 两点间连线
   drawLine(from, to, isTemp) {
-    const { option, linkContainer } = this
+    const { option, linkContainer, isVertical, allowFold } = this
+    const { smooth } = option
+
     const lineClassName = `line-${from.key}-${to.key}`
     let link = document.querySelector(`.${lineClassName}`)
     if (!link) {
@@ -618,13 +620,30 @@ class TreeChart {
       isTemp && link.classList.add('is-temp-line')
       linkContainer.appendChild(link)
     }
-    const centerX = (to.x - from.x) / 2
-    const centerY = (to.y - from.y) / 2
-    const M = `${from.x} ${from.y}`
-    const T = `${to.x} ${to.y}`
-    const Q1 = `${from.x + centerX - option.smooth / 100 * centerX} ${from.y}`
-    const Q2 = `${from.x + centerX} ${from.y + centerY}`
-    link.setAttribute('d', `M${M} Q${Q1} ${Q2} T ${T}`)
+
+    let { x: fromX, y: fromY } = from
+    const { x: toX, y: toY } = to
+    // 需要加上fold按钮的宽度
+    if (allowFold) isVertical ? fromY += 5 : fromX += 5
+    const centerX = (toX - fromX) / 2
+    const centerY = (toY - fromY) / 2
+    const offsetX = centerX / 2 * smooth / 100
+    const offsetY = centerY / 2 * smooth / 100
+
+    const M = `${fromX} ${fromY}`
+    const T = `${toX} ${toY}`
+    let C1 = ''
+    let C2 = ''
+    let C3 = ''
+    let S1 = ''
+    if (isVertical) {
+    } else {
+      C1 = `${fromX + centerX - offsetX} ${fromY + offsetY}`
+      C2 = `${fromX + centerX - offsetX} ${fromY + offsetY}`
+      C3 = `${fromX + centerX} ${fromY + centerY}`
+      S1 = `${fromX + centerX + offsetX} ${toY - offsetY}`
+    }
+    link.setAttribute('d', `M${M} C${C1} ${C2} ${C3} S${S1} ${T}`)
   }
 
   // 沿着事件触发路径向上找node节点
