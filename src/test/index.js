@@ -47,10 +47,9 @@ const chart = new TreeChart({
   container: document.querySelector('#demo'),
   // isVertical: true,
   distanceX: 100,
-  distanceY: 40,
+  distanceY: 100,
   draggable: true,
   dragScroll: true,
-  smooth: 100,
   scrollTriggerDistance: 30,
   allowFold: true,
   extendSpace: 392,
@@ -58,6 +57,9 @@ const chart = new TreeChart({
     right: 0,
     top: 50,
     bottom: 80
+  },
+  line: {
+    type: 'broken'
   },
   dragControl(data) {
     return {

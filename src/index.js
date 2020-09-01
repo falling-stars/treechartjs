@@ -294,6 +294,10 @@ class TreeChart {
       scrollSpeed: 8, // 滚动速度
       extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向),
       isVertical: false,
+      line: {
+        type: 'bezier',
+        smooth: 50
+      },
       ...data
     }
     option.padding = {
@@ -303,11 +307,12 @@ class TreeChart {
       left: 30,
       ...option.padding
     }
-    const { draggable, allowFold, dragScroll, isVertical } = option
+    const { draggable, allowFold, dragScroll, isVertical, line } = option
     this.draggable = draggable
     this.allowFold = allowFold
     this.dragScroll = dragScroll
     this.isVertical = isVertical
+    this.lineConfig = line
     this.option = option
     this.initHooks()
   }
@@ -609,8 +614,8 @@ class TreeChart {
 
   // 两点间连线
   drawLine(from, to, isTemp) {
-    const { option, linkContainer, isVertical, allowFold } = this
-    const { smooth } = option
+    const { linkContainer, isVertical, allowFold, lineConfig } = this
+    const { type: lineType, smooth } = lineConfig
 
     const lineClassName = `line-${from.key}-${to.key}`
     let link = document.querySelector(`.${lineClassName}`)
@@ -621,29 +626,42 @@ class TreeChart {
       linkContainer.appendChild(link)
     }
 
+    let path = ''
     let { x: fromX, y: fromY } = from
     const { x: toX, y: toY } = to
     // 需要加上fold按钮的宽度
     if (allowFold) isVertical ? fromY += 5 : fromX += 5
     const centerX = (toX - fromX) / 2
     const centerY = (toY - fromY) / 2
-    const offsetX = centerX / 2 * smooth / 100
-    const offsetY = centerY / 2 * smooth / 100
-
     const M = `${fromX} ${fromY}`
     const T = `${toX} ${toY}`
-    let C1 = ''
-    let C2 = ''
-    let C3 = ''
-    let S1 = ''
-    if (isVertical) {
-    } else {
-      C1 = `${fromX + centerX - offsetX} ${fromY + offsetY}`
-      C2 = `${fromX + centerX - offsetX} ${fromY + offsetY}`
-      C3 = `${fromX + centerX} ${fromY + centerY}`
-      S1 = `${fromX + centerX + offsetX} ${toY - offsetY}`
+
+    if (lineType === 'straight') path = `M${M} T ${T}`
+    if (lineType === 'broken') {
+      let L1 = ''
+      let L2 = ''
+      if (isVertical) {
+        L1 = `${fromX} ${fromY + centerY}`
+        L2 = `${toX} ${toY - centerY}`
+      } else {
+        L1 = `${fromX + centerX} ${fromY}`
+        L2 = `${toX - centerX} ${toY}`
+      }
+      path = `M${M} L${L1} L${L2} L${T}`
     }
-    link.setAttribute('d', `M${M} C${C1} ${C2} ${C3} S${S1} ${T}`)
+    if (lineType === 'bezier') {
+      const smoothScale = smooth / 100
+      let Q1 = ''
+      if (isVertical) {
+        Q1 = `${fromX} ${fromY + (centerY - centerY * smoothScale)}`
+      } else {
+        Q1 = `${fromX + (centerX - centerX * smoothScale)} ${fromY}`
+      }
+      const Q2 = `${fromX + centerX} ${fromY + centerY}`
+      path = `M${M} Q${Q1} ${Q2} T ${T}`
+    }
+
+    link.setAttribute('d', path)
   }
 
   // 沿着事件触发路径向上找node节点
