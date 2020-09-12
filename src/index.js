@@ -630,7 +630,7 @@ class TreeChart {
     let { x: fromX, y: fromY } = from
     const { x: toX, y: toY } = to
     // 需要加上fold按钮的宽度
-    if (allowFold) isVertical ? fromY += 5 : fromX += 5
+    if (allowFold && this.existChildren(from.key)) isVertical ? fromY += 5 : fromX += 5
     const centerX = (toX - fromX) / 2
     const centerY = (toY - fromY) / 2
     const M = `${fromX} ${fromY}`
@@ -888,144 +888,173 @@ class TreeChart {
     notAllowEffect && notAllowEffect.classList.remove('show-not-allow')
   }
 
-  // 生成拖动效果
-  createDragEffect(collideNodeKey, { top: ghostTop, bottom: ghostBottom }) {
-    const { key: dragNodeKey } = this.dragData
-    let insertType = ''
-    let from = null
-    let to = null
+  getCollideType(collideNodeKey, ghostPosition) {
+    const { rootNode, isVertical, dragData, positionData } = this
+    const { key: dragNodeKey } = dragData
+
+    const { top: collideNodeTop, bottom: collideNodeBottom, left: collideNodeLeft, right: collideNodeRight } = positionData.node[collideNodeKey]
+    const { left: ghostLeft, right: ghostRight, top: ghostTop, bottom: ghostBottom } = ghostPosition
 
     const dragNode = this.getNodeElement(dragNodeKey)
     const collideNode = this.getNodeElement(collideNodeKey)
 
-    // 不可拖到子节点上
-    if (dragNode.parentElement.contains(collideNode)) return setNotAllowEffect(collideNode)
-
-    const {
-      top: collideNodeTop,
-      bottom: collideNodeBottom,
-      left: collideNodeLeft,
-      right: collideNodeRight
-    } = this.positionData.node[collideNodeKey]
-
     // 拖到父节点时只能作为兄弟节点插入
     const coverIsParent = collideNodeKey === this.getParentKey(dragNodeKey)
-    // 禁止插入到下一个兄弟节点的上面
-    const coverIsNext = collideNodeKey === this.getNextKey(dragNodeKey)
     // 禁止插入到上一个兄弟节点的下面
     const coverIsPrevious = collideNodeKey === this.getPreviousKey(dragNodeKey)
-
+    // 禁止插入到下一个兄弟节点的上面
+    const coverIsNext = collideNodeKey === this.getNextKey(dragNodeKey)
+    // 权限数据
     const allowConfig = {
       child: !collideNode.classList.contains('not-allow-insert-child') && !coverIsParent,
       next: !collideNode.classList.contains('not-allow-insert-next') && !coverIsPrevious,
       previous: !collideNode.classList.contains('not-allow-insert-previous') && !coverIsNext
     }
 
-    // 如果无法以任何类型插入节点的话显示禁止图标
-    let existAllow = false
-    for (const key in allowConfig) {
-      if (allowConfig[key]) {
-        existAllow = true
-        break
-      }
-    }
-    if (!existAllow) return setNotAllowEffect(collideNode)
-
     // 如果被覆盖的是根节点的话只允许作为子节点插入
-    if (collideNode === this.rootNode) {
-      if (!allowConfig.child) return setNotAllowEffect(collideNode)
-      insertType = 'child'
+    if (collideNode === rootNode) return allowConfig.child ? 'child' : 'notAllow'
+    // 不可拖到子节点上
+    if (dragNode.parentElement.contains(collideNode)) return 'notAllow'
+
+    if (isVertical) {
+      // 位置偏左或者偏右(45%)则认为是添加兄弟节点
+      const offsetValue = (collideNodeRight - collideNodeLeft) * 0.45
+      const leftPositionValue = collideNodeLeft + offsetValue
+      const rightPositionValue = collideNodeRight - offsetValue
+      // 在左边插入
+      if (ghostRight <= leftPositionValue && allowConfig.previous) return 'previous'
+      // 在右边插入
+      if (ghostLeft >= rightPositionValue && allowConfig.next) return 'next'
     } else {
       // 位置偏上或者偏下(45%)则认为是添加兄弟节点
       const offsetValue = (collideNodeBottom - collideNodeTop) * 0.45
       const topPositionValue = collideNodeTop + offsetValue
       const bottomPositionValue = collideNodeBottom - offsetValue
-
-      if (ghostBottom <= topPositionValue) {
-        // 在上方插入
-        insertType = 'previous'
-      } else if (ghostTop >= bottomPositionValue) {
-        // 在下方插入
-        insertType = 'next'
-      } else {
-        // 作为子节点插入
-        insertType = 'child'
-      }
-
-      // 不满足自定义控制条件的按照child=>next=>previous的权重取一个
-      if (!allowConfig[insertType]) {
-        insertType = ''
-        for (const key in allowConfig) {
-          if (allowConfig[key]) {
-            insertType = key
-            break
-          }
-        }
-      }
-
-      if (insertType === '') return setNotAllowEffect(collideNode)
+      // 在上方插入
+      if (ghostBottom <= topPositionValue && allowConfig.previous) return 'previous'
+      // 在下方插入
+      if (ghostTop >= bottomPositionValue && allowConfig.next) return 'next'
     }
-    collideNode.classList.add(`become-${insertType}`, 'collide-node')
+    // 作为子节点插入
+    if (allowConfig.child) return 'child'
 
-    if (insertType === 'previous' || insertType === 'next') {
-      const parentNodeKey = this.getParentKey(collideNodeKey)
-      const parentPosition = this.positionData.node[parentNodeKey]
-      from = {
-        x: parentPosition.right,
-        y: (parentPosition.top + parentPosition.bottom) / 2,
-        key: parentNodeKey
-      }
-      to = {
-        x: collideNodeLeft,
-        y: insertType === 'previous' ? collideNodeTop - 20 : collideNodeBottom + 20,
-        key: 'temp'
-      }
-    } else {
-      const createTempChildNode = () => {
-        const chartContent = document.createElement('div')
-        chartContent.classList.add('tree-chart-node', 'temp-chart-content')
-        chartContent.style.width = `${collideNodeRight - collideNodeLeft}px`
-        chartContent.style.height = `${collideNodeBottom - collideNodeTop}px`
-        chartContent.style.marginBottom = `${this.option.distanceY}px`
+    // 不满足自定义控制条件的按照child=>next=>previous的权重取一个
+    for (const key in allowConfig) {
+      if (allowConfig[key]) return key
+    }
+    return 'notAllow'
+  }
 
-        const childrenContainer = this.createChildrenContainer('temp-children-container')
-        const chartContainer = this.createNodeContainer(true)
-        chartContainer.appendChild(chartContent)
-        childrenContainer.appendChild(chartContainer)
-        collideNode.parentElement.appendChild(childrenContainer)
-
-        to = {
-          x: collideNodeRight + this.option.distanceX,
-          y: (collideNodeTop + collideNodeBottom) / 2,
+  getCollideLinePosition(collideType, collideNodeKey) {
+    const { isVertical, positionData, option } = this
+    const { distanceX, distanceY } = option
+    const linPositionData = {}
+    const { top: collideNodeTop, bottom: collideNodeBottom, left: collideNodeLeft, right: collideNodeRight } = positionData.node[collideNodeKey]
+    if (isVertical) {
+      // 插入子节点类型
+      if (collideType === 'child') {
+        linPositionData.from = {
+          x: (collideNodeLeft + collideNodeRight) / 2,
+          y: collideNodeBottom,
+          key: collideNodeKey
+        }
+        // 有子节点并且子节点展开
+        if (this.existChildren(collideNodeKey) && !this.nodeIsFold(collideNodeKey)) {
+          const lastChildrenNodeKey = this.getChildrenKeys(collideNodeKey).pop()
+          const { left: lastChildrenNodeLeft, bottom: lastChildrenNodeBottom } = positionData.node[lastChildrenNodeKey]
+          linPositionData.to = {
+            x: lastChildrenNodeLeft + 20,
+            y: lastChildrenNodeBottom,
+            key: 'temp'
+          }
+          return linPositionData
+        }
+        // 没有子节点和子节点折叠相同处理
+        linPositionData.to = {
+          x: (collideNodeLeft + collideNodeRight) / 2,
+          y: collideNodeBottom + distanceY,
           key: 'temp'
         }
+        return linPositionData
       }
-      from = {
+      const parentNodeKey = this.getParentKey(collideNodeKey)
+      const parentPosition = positionData.node[parentNodeKey]
+      linPositionData.from = {
+        x: (parentPosition.left + parentPosition.right) / 2,
+        y: parentPosition.bottom,
+        key: parentNodeKey
+      }
+      linPositionData.to = {
+        x: collideType === 'previous' ? collideNodeLeft - 20 : collideNodeRight + 20,
+        y: collideNodeTop,
+        key: 'temp'
+      }
+      return linPositionData
+    }
+    // 插入子节点类型
+    if (collideType === 'child') {
+      linPositionData.from = {
         x: collideNodeRight,
         y: (collideNodeTop + collideNodeBottom) / 2,
         key: collideNodeKey
       }
-      // 有子节点的情况
-      if (this.existChildren(collideNodeKey)) {
-        // 拖到收起状态的节点需要创建临时节点
-        if (childrenIsFold(collideNode)) {
-          createTempChildNode()
-        } else {
-          const insertPreviousKey = this.getChildrenKeys(collideNodeKey).pop()
-          const { left: childPreviousLeft, bottom: childPreviousBottom } = this.positionData.node[insertPreviousKey]
-          to = {
-            x: childPreviousLeft,
-            y: childPreviousBottom + 20,
-            key: 'temp'
-          }
+      // 有子节点并且子节点展开
+      if (this.existChildren(collideNodeKey) && !this.nodeIsFold(collideNodeKey)) {
+        const lastChildrenNodeKey = this.getChildrenKeys(collideNodeKey).pop()
+        const { left: lastChildrenNodeLeft, bottom: lastChildrenNodeBottom } = positionData.node[lastChildrenNodeKey]
+        linPositionData.to = {
+          x: lastChildrenNodeLeft,
+          y: lastChildrenNodeBottom + 20,
+          key: 'temp'
         }
-      } else {
-        // 没有子节点的情况创建一个临时节点
-        createTempChildNode()
+        return linPositionData
       }
+      // 没有子节点和子节点折叠相同处理
+      linPositionData.to = {
+        x: collideNodeRight + distanceX,
+        y: (collideNodeTop + collideNodeBottom) / 2,
+        key: 'temp'
+      }
+      return linPositionData
     }
+    const parentNodeKey = this.getParentKey(collideNodeKey)
+    const parentPosition = positionData.node[parentNodeKey]
+    linPositionData.from = {
+      x: parentPosition.right,
+      y: (parentPosition.top + parentPosition.bottom) / 2,
+      key: parentNodeKey
+    }
+    linPositionData.to = {
+      x: collideNodeLeft,
+      y: collideType === 'previous' ? collideNodeTop - 20 : collideNodeBottom + 20,
+      key: 'temp'
+    }
+    return linPositionData
+  }
 
+  // 生成拖动效果
+  createDragEffect(collideNodeKey, ghostPosition) {
+    const { positionData } = this
+    const collideNode = this.getNodeElement(collideNodeKey)
+    const collideType = this.getCollideType(collideNodeKey, ghostPosition)
+    if (collideType === 'notAllow') return setNotAllowEffect(collideNode)
+    collideNode.classList.add(`become-${collideType}`, 'collide-node')
+    const { from, to } = this.getCollideLinePosition(collideType, collideNodeKey)
     this.drawLine(from, to, true)
+    if (this.existChildren(collideNodeKey) && !this.nodeIsFold(collideNodeKey)) return
+    // 创建临时节点
+    // todo 未完成
+    const { top: collideNodeTop, bottom: collideNodeBottom, left: collideNodeLeft, right: collideNodeRight } = positionData.node[collideNodeKey]
+    const chartContent = document.createElement('div')
+    chartContent.classList.add('tree-chart-node', 'temp-chart-content')
+    chartContent.style.width = `${collideNodeRight - collideNodeLeft}px`
+    chartContent.style.height = `${collideNodeBottom - collideNodeTop}px`
+    chartContent.style.marginBottom = `${this.option.distanceY}px`
+    const childrenContainer = this.createChildrenContainer('temp-children-container')
+    const chartContainer = this.createNodeContainer(true)
+    chartContainer.appendChild(chartContent)
+    childrenContainer.appendChild(chartContainer)
+    collideNode.parentElement.appendChild(childrenContainer)
   }
 
   // 获取拖动过程中碰撞的元素
