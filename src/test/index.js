@@ -45,7 +45,7 @@ const data = {
 const chart = new TreeChart({
   data,
   container: document.querySelector('#demo'),
-  isVertical: true,
+  // isVertical: true,
   distanceX: 100,
   distanceY: 100,
   draggable: true,

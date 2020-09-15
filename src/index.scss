@@ -227,7 +227,8 @@
     }
     .become-next {
       &:after {
-        left: calc(100% + 10px);
+        left: auto;
+        right: -30px;
         bottom: 0;
         width: 20px;
         height: 100%;
@@ -254,7 +255,7 @@
         &:after {
           left: 0 !important;
           top: 0;
-          bottom: auto;
+          bottom: auto !important;
           width: 100% !important;
           height: 20px !important;
         }
