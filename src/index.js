@@ -2,7 +2,6 @@ import './index.scss'
 
 const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
 const isNumber = data => /Number/.test(Object.prototype.toString.call(data))
-const childrenIsFold = node => Boolean(node.querySelector('.is-fold'))
 const setNotAllowEffect = node => node.classList.add('show-not-allow')
 const getArrayIntersection = (...arrays) => {
   const arrayCount = arrays.length
@@ -20,7 +19,7 @@ const getArrayIntersection = (...arrays) => {
   return result
 }
 
-class TreeChart {
+export default class TreeChart {
   /* API */
   getKeyByElement(nodeElement) {
     if (!isElement(nodeElement)) return null
@@ -961,10 +960,10 @@ class TreeChart {
         // 有子节点并且子节点展开
         if (this.existChildren(collideNodeKey) && !this.nodeIsFold(collideNodeKey)) {
           const lastChildrenNodeKey = this.getChildrenKeys(collideNodeKey).pop()
-          const { left: lastChildrenNodeLeft, bottom: lastChildrenNodeBottom } = positionData.node[lastChildrenNodeKey]
+          const { right: lastChildrenNodeRight, top: lastChildrenNodeTop } = positionData.node[lastChildrenNodeKey]
           linPositionData.to = {
-            x: lastChildrenNodeLeft + 20,
-            y: lastChildrenNodeBottom,
+            x: lastChildrenNodeRight + 20,
+            y: lastChildrenNodeTop,
             key: 'temp'
           }
           return linPositionData
@@ -1041,20 +1040,20 @@ class TreeChart {
     collideNode.classList.add(`become-${collideType}`, 'collide-node')
     const { from, to } = this.getCollideLinePosition(collideType, collideNodeKey)
     this.drawLine(from, to, true)
-    if (this.existChildren(collideNodeKey) && !this.nodeIsFold(collideNodeKey)) return
-    // 创建临时节点
-    // todo 未完成
-    const { top: collideNodeTop, bottom: collideNodeBottom, left: collideNodeLeft, right: collideNodeRight } = positionData.node[collideNodeKey]
-    const chartContent = document.createElement('div')
-    chartContent.classList.add('tree-chart-node', 'temp-chart-content')
-    chartContent.style.width = `${collideNodeRight - collideNodeLeft}px`
-    chartContent.style.height = `${collideNodeBottom - collideNodeTop}px`
-    chartContent.style.marginBottom = `${this.option.distanceY}px`
-    const childrenContainer = this.createChildrenContainer('temp-children-container')
-    const chartContainer = this.createNodeContainer(true)
-    chartContainer.appendChild(chartContent)
-    childrenContainer.appendChild(chartContainer)
-    collideNode.parentElement.appendChild(childrenContainer)
+    // 插入子节点类型：不存在子节点，或者子节点被收起，这时候需要创建临时节点
+    if (collideType === 'child' && (!this.existChildren(collideNodeKey) || this.nodeIsFold(collideNodeKey))) {
+      const { top: collideNodeTop, bottom: collideNodeBottom, left: collideNodeLeft, right: collideNodeRight } = positionData.node[collideNodeKey]
+      const chartContent = document.createElement('div')
+      chartContent.classList.add('tree-chart-node', 'temp-chart-content')
+      chartContent.style.width = `${collideNodeRight - collideNodeLeft}px`
+      chartContent.style.height = `${collideNodeBottom - collideNodeTop}px`
+      chartContent.style.marginBottom = `${this.option.distanceY}px`
+      const childrenContainer = this.createChildrenContainer('temp-children-container')
+      const chartContainer = this.createNodeContainer(true)
+      chartContainer.appendChild(chartContent)
+      childrenContainer.appendChild(chartContainer)
+      collideNode.parentElement.appendChild(childrenContainer)
+    }
   }
 
   // 获取拖动过程中碰撞的元素
@@ -1250,5 +1249,3 @@ class TreeChart {
     }
   }
 }
-
-export default TreeChart
