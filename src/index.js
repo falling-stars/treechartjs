@@ -1047,7 +1047,6 @@ export default class TreeChart {
       chartContent.classList.add('tree-chart-node', 'temp-chart-content')
       chartContent.style.width = `${collideNodeRight - collideNodeLeft}px`
       chartContent.style.height = `${collideNodeBottom - collideNodeTop}px`
-      chartContent.style.marginBottom = `${this.option.distanceY}px`
       const childrenContainer = this.createChildrenContainer('temp-children-container')
       const chartContainer = this.createNodeContainer(true)
       chartContainer.appendChild(chartContent)
@@ -1134,25 +1133,39 @@ export default class TreeChart {
   }
 
   resize() {
-    const { option, nodesContainer, linkContainer, draggable, ghostContainer } = this
+    const { option, nodesContainer, linkContainer, draggable, ghostContainer, rootNode, isVertical } = this
+    const { extendSpace } = option
     const { style: nodesContainerStyle } = nodesContainer
+    const { style: linkContainerStyle } = linkContainer
 
     // 重新渲染的情况需要先清除旧的尺寸
     nodesContainerStyle.width = 'auto'
     nodesContainerStyle.minWidth = 'auto'
 
     const { clientWidth: nodeContainerWidth, clientHeight: nodeContainerHeight } = nodesContainer
-    const width = `${draggable ? nodeContainerWidth + option.extendSpace : nodeContainerWidth}px`
-    const height = `${nodeContainerHeight}px`
+    let width = nodeContainerWidth
+    let height = nodeContainerHeight
 
-    nodesContainerStyle.width = width
+    // 可拖拽时需要扩展宽度或高度，这样才能插入新节点
+    if (draggable) {
+      const { width: rootNodeWidth, height: rootNodeHeight } = rootNode.getBoundingClientRect()
+      if (isVertical) {
+        height += extendSpace > rootNodeHeight ? extendSpace : rootNodeHeight
+      } else {
+        width += extendSpace > rootNodeWidth ? extendSpace : rootNodeWidth
+      }
+    }
+
+    const newWidth = `${width}px`
+    const newHeight = `${height}px`
+
     nodesContainerStyle.minWidth = '100%'
-    linkContainer.setAttribute('width', width)
-    linkContainer.setAttribute('height', height)
+    nodesContainerStyle.width = linkContainerStyle.width = newWidth
+    nodesContainerStyle.height = linkContainerStyle.height = newHeight
     if (draggable) {
       const { style: ghostContainerStyle } = ghostContainer
-      ghostContainerStyle.width = width
-      ghostContainerStyle.height = height
+      ghostContainerStyle.width = newWidth
+      ghostContainerStyle.height = newHeight
     }
   }
 
