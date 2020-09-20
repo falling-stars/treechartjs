@@ -1,4 +1,5 @@
 import './index.scss'
+import FollowScroll from './follow-scroll'
 
 const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
 const isNumber = data => /Number/.test(Object.prototype.toString.call(data))
@@ -747,7 +748,8 @@ export default class TreeChart {
 
   // 绑定拖动事件
   setDragEvent() {
-    const { ghostContainer, container, nodesContainer, hooks } = this
+    const { ghostContainer, container, nodesContainer, hooks, option } = this
+    const { scrollTriggerDistance } = option
     const { preventDrag, dragStart, dragEnd } = hooks
     // 是否触发dragStart事件
     let emitDragStart = true
@@ -777,6 +779,9 @@ export default class TreeChart {
         mouseDownOffsetX: clientX + container.scrollLeft - nodePositionLeft,
         mouseDownOffsetY: clientY + container.scrollTop - nodePositionTop
       })
+
+      // 跟随滚动
+      this.FollowScroll.start(ghostElement)
     })
 
     nodesContainer.addEventListener('mousemove', e => {
@@ -803,7 +808,7 @@ export default class TreeChart {
       const ghostPosition = this.getGhostPosition()
       this.setDragEffect(ghostPosition)
       // 跟随滚动
-      this.followScroll(ghostPosition)
+      // this.followScroll(ghostPosition)
       if (dragStart && emitDragStart) {
         emitDragStart = false
         dragStart({ key, element: this.getNodeElement(key) })
@@ -828,6 +833,7 @@ export default class TreeChart {
       }
 
       // 停止拖动，移除拖动效果
+      this.FollowScroll.stop()
       this.stopFollowScroll()
       nodesContainer.classList.remove('cursor-move')
       ghostContainer.innerHTML = ''
@@ -862,6 +868,12 @@ export default class TreeChart {
       }
       oldScroll.left = currentScrollLeft
       oldScroll.top = currentScrollTop
+    })
+
+    this.FollowScroll = new FollowScroll({
+      scrollContainer: container,
+      scrollTriggerDistance,
+      eventContainer: nodesContainer
     })
   }
 
