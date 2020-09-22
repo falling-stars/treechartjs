@@ -36,12 +36,32 @@ export default class FollowScroll {
       if (movementY > 0 || scrollTop === 0) directData.top = false
       if (movementX < 0 || scrollLeft + clientWidth >= scrollWidth) directData.right = false
       if (movementY < 0 || scrollTop + clientHeight >= scrollHeight) directData.bottom = false
+
+      this.triggerScroll()
     }
     eventContainer.addEventListener('mousemove', this.mouseMoveHandler)
   }
 
-  scroll() {
-
+  triggerScroll() {
+    const { directData, scrollContainer } = this
+    let existDirect = false
+    for (const key in directData) {
+      if (directData[key]) {
+        existDirect = true
+        break
+      }
+    }
+    if (!existDirect) return this.stop()
+    if (this.interval) return
+    this.interval = setInterval(() => {
+      let { scrollLeft, scrollTop } = scrollContainer
+      if (directData.left) scrollLeft--
+      if (directData.right) scrollLeft++
+      if (directData.top) scrollTop--
+      if (directData.bottom) scrollTop++
+      scrollContainer.scrollLeft = scrollLeft
+      scrollContainer.scrollTop = scrollTop
+    }, 20)
   }
 
   start(targetNode) {
@@ -58,7 +78,7 @@ export default class FollowScroll {
 
   destroy() {
     this.eventContainer.removeEventListener('mousemove', this.mouseMoveHandler)
-    this.scrollContainer = this.eventContainer = null
+    this.targetNode = this.scrollContainer = this.eventContainer = null
     this.interval = 0
   }
 }
