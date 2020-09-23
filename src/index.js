@@ -291,7 +291,7 @@ export default class TreeChart {
       dragScroll: false, // 是否开启拖拽滚动
       scrollTriggerDistance: 50, // 触发滚动的距离
       smooth: 50, // 光滑程度(0-100，100为直线)
-      scrollSpeed: 8, // 滚动速度
+      scrollSpeed: 6, // 滚动速度
       extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向),
       isVertical: false,
       line: {
@@ -740,16 +740,12 @@ export default class TreeChart {
       mouseDownOffsetX: 0,
       mouseDownOffsetY: 0
     }
-    this.followScrollData = {
-      interval: null,
-      direct: ''
-    }
   }
 
   // 绑定拖动事件
   setDragEvent() {
     const { ghostContainer, container, nodesContainer, hooks, option } = this
-    const { scrollTriggerDistance } = option
+    const { scrollTriggerDistance, scrollSpeed } = option
     const { preventDrag, dragStart, dragEnd } = hooks
     // 是否触发dragStart事件
     let emitDragStart = true
@@ -808,7 +804,6 @@ export default class TreeChart {
       const ghostPosition = this.getGhostPosition()
       this.setDragEffect(ghostPosition)
       // 跟随滚动
-      // this.followScroll(ghostPosition)
       if (dragStart && emitDragStart) {
         emitDragStart = false
         dragStart({ key, element: this.getNodeElement(key) })
@@ -834,7 +829,6 @@ export default class TreeChart {
 
       // 停止拖动，移除拖动效果
       this.FollowScroll.stop()
-      this.stopFollowScroll()
       nodesContainer.classList.remove('cursor-move')
       ghostContainer.innerHTML = ''
       this.removeDragEffect()
@@ -873,7 +867,8 @@ export default class TreeChart {
     this.FollowScroll = new FollowScroll({
       scrollContainer: container,
       scrollTriggerDistance,
-      eventContainer: nodesContainer
+      eventContainer: nodesContainer,
+      scrollSpeed
     })
   }
 
@@ -1181,61 +1176,6 @@ export default class TreeChart {
     }
   }
 
-  followScroll({ left, top, right, bottom }) {
-    const { container, option } = this
-
-    const { scrollLeft, scrollTop, clientWidth, clientHeight, scrollWidth, scrollHeight } = container
-    const distance = option.scrollTriggerDistance
-    const existRightContent = scrollWidth - scrollLeft > clientWidth
-    const existBottomContent = scrollHeight - scrollTop > clientHeight
-
-    let direct = ''
-    // 确定滚动方向，有可能同时满足不同的条件
-    if (scrollLeft > 0 && left < scrollLeft + distance) direct = 'Left'
-    if (!direct && scrollTop > 0 && top < scrollTop + distance) direct = 'Top'
-    if (!direct && existRightContent && clientWidth + scrollLeft - distance < right) direct = 'Right'
-    if (!direct && existBottomContent && clientHeight + scrollTop - distance < bottom) direct = 'Bottom'
-    if (!direct) return this.stopFollowScroll()
-
-    if (this.followScrollData.direct !== direct) {
-      this.stopFollowScroll()
-      this.followScrollData.direct = direct
-      const scrollSpeed = this.option.scrollSpeed
-      this.followScrollData.interval = setInterval(() => {
-        if (direct === 'Left' || direct === 'Top') {
-          container[`scroll${direct}`] -= scrollSpeed
-        } else {
-          if (direct === 'Right') {
-            container.scrollLeft += scrollSpeed
-          } else {
-            container.scrollTop += scrollSpeed
-          }
-        }
-        let stop = false
-        switch (direct) {
-          case 'Left':
-            stop = scrollLeft === 0
-            break
-          case 'Top':
-            stop = scrollTop === 0
-            break
-          case 'Right':
-            stop = scrollLeft + clientWidth === scrollWidth
-            break
-          case 'Bottom':
-            stop = !scrollTop > 0
-        }
-        stop && this.stopFollowScroll()
-      }, 20)
-    }
-  }
-
-  stopFollowScroll() {
-    const { interval } = this.followScrollData
-    interval && clearInterval(interval)
-    this.followScrollData.direct = ''
-  }
-
   setDragScroll() {
     const { container, nodesContainer } = this
     let lock = true
@@ -1267,6 +1207,7 @@ export default class TreeChart {
   }
 
   destroy() {
+    this.FollowScroll.destroy()
     this.windowEvent.forEach(item => window.removeEventListener(item.type, item.handler))
     this.container.innerHTML = ''
     for (const key in this) {

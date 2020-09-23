@@ -1,8 +1,9 @@
 export default class FollowScroll {
   constructor(option) {
-    const { scrollContainer, eventContainer, scrollTriggerDistance } = option
+    const { scrollContainer, eventContainer, scrollTriggerDistance, scrollSpeed } = option
     this.scrollContainer = scrollContainer
     this.eventContainer = eventContainer
+    this.scrollSpeed = scrollSpeed
     this.triggerDistance = scrollTriggerDistance || 0
     this.targetNode = null
     this.interval = 0
@@ -16,34 +17,37 @@ export default class FollowScroll {
   }
 
   setEvent() {
-    const { scrollContainer, eventContainer, triggerDistance, directData } = this
+    const { eventContainer } = this
     this.mouseMoveHandler = e => {
       const { button, movementX, movementY } = e
       // 处理Chrome76版本长按不移动也会触发的情况
       if (movementX === 0 && movementY === 0) return
-      const { targetNode } = this
-      if (button || !targetNode) return
-
-      const { scrollLeft, scrollTop, scrollWidth, scrollHeight, clientWidth, clientHeight } = scrollContainer
-      const { left: scrollContainerLeft, right: scrollContainerRight, top: scrollContainerTop, bottom: scrollContainerBottom } = scrollContainer.getBoundingClientRect()
-      const { left: targetNodeLeft, right: targetNodeRight, top: targetNodeTop, bottom: targetNodeBottom } = targetNode.getBoundingClientRect()
-
-      if (targetNodeLeft - scrollContainerLeft < triggerDistance) directData.left = true
-      if (targetNodeTop - scrollContainerTop < triggerDistance) directData.top = true
-      if (scrollContainerRight - targetNodeRight < triggerDistance) directData.right = true
-      if (scrollContainerBottom - targetNodeBottom < triggerDistance) directData.bottom = true
-      if (movementX > 0 || scrollLeft === 0) directData.left = false
-      if (movementY > 0 || scrollTop === 0) directData.top = false
-      if (movementX < 0 || scrollLeft + clientWidth >= scrollWidth) directData.right = false
-      if (movementY < 0 || scrollTop + clientHeight >= scrollHeight) directData.bottom = false
-
+      if (button || !this.targetNode) return
+      this.setDirectData(e)
       this.triggerScroll()
     }
     eventContainer.addEventListener('mousemove', this.mouseMoveHandler)
   }
 
+  setDirectData(event) {
+    const { movementX, movementY } = event
+    const { scrollContainer, targetNode, triggerDistance, directData } = this
+    const { scrollLeft, scrollTop, scrollWidth, scrollHeight, clientWidth, clientHeight } = scrollContainer
+    const { left: scrollContainerLeft, right: scrollContainerRight, top: scrollContainerTop, bottom: scrollContainerBottom } = scrollContainer.getBoundingClientRect()
+    const { left: targetNodeLeft, right: targetNodeRight, top: targetNodeTop, bottom: targetNodeBottom } = targetNode.getBoundingClientRect()
+
+    if (targetNodeLeft - scrollContainerLeft < triggerDistance) directData.left = true
+    if (targetNodeTop - scrollContainerTop < triggerDistance) directData.top = true
+    if (scrollContainerRight - targetNodeRight < triggerDistance) directData.right = true
+    if (scrollContainerBottom - targetNodeBottom < triggerDistance) directData.bottom = true
+    if (movementX > 0 || scrollLeft === 0) directData.left = false
+    if (movementY > 0 || scrollTop === 0) directData.top = false
+    if (movementX < 0 || scrollLeft + clientWidth >= scrollWidth) directData.right = false
+    if (movementY < 0 || scrollTop + clientHeight >= scrollHeight) directData.bottom = false
+  }
+
   triggerScroll() {
-    const { directData, scrollContainer } = this
+    const { directData, scrollContainer, scrollSpeed } = this
     let existDirect = false
     for (const key in directData) {
       if (directData[key]) {
@@ -51,14 +55,14 @@ export default class FollowScroll {
         break
       }
     }
-    if (!existDirect) return this.stop()
+    if (!existDirect) return this.stop(true)
     if (this.interval) return
     this.interval = setInterval(() => {
       let { scrollLeft, scrollTop } = scrollContainer
-      if (directData.left) scrollLeft--
-      if (directData.right) scrollLeft++
-      if (directData.top) scrollTop--
-      if (directData.bottom) scrollTop++
+      if (directData.left) scrollLeft -= scrollSpeed
+      if (directData.right) scrollLeft += scrollSpeed
+      if (directData.top) scrollTop -= scrollSpeed
+      if (directData.bottom) scrollTop += scrollSpeed
       scrollContainer.scrollLeft = scrollLeft
       scrollContainer.scrollTop = scrollTop
     }, 20)
@@ -68,8 +72,8 @@ export default class FollowScroll {
     this.targetNode = targetNode
   }
 
-  stop() {
-    this.targetNode = null
+  stop(keepTargetNode = false) {
+    if (!keepTargetNode) this.targetNode = null
     if (this.interval) {
       clearInterval(this.interval)
       this.interval = 0
