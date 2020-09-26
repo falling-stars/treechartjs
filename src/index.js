@@ -300,19 +300,27 @@ export default class TreeChart {
       },
       ...data
     }
-    option.padding = {
-      top: 30,
-      right: 30,
-      bottom: 30,
-      left: 30,
-      ...option.padding
-    }
-    const { draggable, allowFold, dragScroll, isVertical, line } = option
+    const { draggable, allowFold, dragScroll, isVertical, line, padding } = option
     this.draggable = draggable
     this.allowFold = allowFold
     this.dragScroll = dragScroll
     this.isVertical = isVertical
     this.lineConfig = line
+    const containerPadding = {
+      top: 30,
+      right: 30,
+      bottom: 30,
+      left: 30,
+      ...padding
+    }
+    for (const key in containerPadding) {
+      let paddingValue = containerPadding[key]
+      if (!isNumber(paddingValue)) paddingValue = 0
+      // draggable时候最小内边距不能小于30
+      if (draggable && paddingValue < 30) paddingValue = 30
+      containerPadding[key] = paddingValue
+    }
+    this.containerPadding = containerPadding
     this.option = option
     this.initHooks()
   }
@@ -350,17 +358,13 @@ export default class TreeChart {
   }
 
   createNodesContainer() {
-    const { option, container } = this
-    const { padding } = option
+    const { container, containerPadding } = this
     const nodesContainer = this.createNodeContainer()
     nodesContainer.classList.add('is-nodes-container')
-    for (const key in padding) {
-      if (/left|top|right|bottom/.test(key)) {
-        let value = padding[key]
-        if (!isNumber(value) || value < 0) continue
-        if (this.draggable && /top|bottom/.test(key) && value < 30) value = 30
-        nodesContainer.style[`padding${key.replace(/^./, $ => $.toUpperCase())}`] = `${value}px`
-      }
+    for (const direct in containerPadding) {
+      if (!/left|top|right|bottom/.test(direct)) continue
+      const paddingValue = containerPadding[direct]
+      nodesContainer.style[`padding${direct.replace(/^./, $ => $.toUpperCase())}`] = `${paddingValue}px`
     }
     container.appendChild(nodesContainer)
     this.nodesContainer = nodesContainer
@@ -810,7 +814,7 @@ export default class TreeChart {
       }
     })
 
-    this.registerWindowEvent('mouseup', e => {
+    this.registerWindowEvent('mouseup', () => {
       emitDragStart = true
       const { dragData, nodesContainer, ghostContainer } = this
 
@@ -1145,8 +1149,10 @@ export default class TreeChart {
     const { style: nodesContainerStyle } = nodesContainer
     const { style: linkContainerStyle } = linkContainer
 
-    // 重新渲染的情况需要先清除旧的尺寸
+    // 需要先清除旧的尺寸
+    nodesContainerStyle.height = 'auto'
     nodesContainerStyle.width = 'auto'
+    nodesContainerStyle.minHeight = 'auto'
     nodesContainerStyle.minWidth = 'auto'
 
     const { clientWidth: nodeContainerWidth, clientHeight: nodeContainerHeight } = nodesContainer
@@ -1166,7 +1172,7 @@ export default class TreeChart {
     const newWidth = `${width}px`
     const newHeight = `${height}px`
 
-    nodesContainerStyle.minWidth = '100%'
+    nodesContainerStyle[isVertical ? 'minHeight' : 'minWidth'] = '100%'
     nodesContainerStyle.width = linkContainerStyle.width = newWidth
     nodesContainerStyle.height = linkContainerStyle.height = newHeight
     if (draggable) {

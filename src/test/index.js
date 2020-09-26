@@ -52,12 +52,7 @@ const chart = new TreeChart({
   dragScroll: true,
   scrollTriggerDistance: 30,
   allowFold: true,
-  extendSpace: 392,
-  padding: {
-    right: 0,
-    top: 50,
-    bottom: 80
-  },
+  // extendSpace: 392,
   // line: {
   //   type: 'broken'
   // },
