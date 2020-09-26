@@ -218,12 +218,16 @@ export default class TreeChart {
     this.reloadLink()
   }
 
-  /* == */
-
-  registerWindowEvent(eventType, handler) {
+  // 需要取消注册的才使用该函数
+  registerEvent(eventType, handler, eventTarget = window) {
+    if (!this.eventList) this.eventList = []
     const handlerFunction = handler.bind(this)
-    this.windowEvent.push({ type: eventType, handler: handlerFunction })
-    window.addEventListener('mouseup', handlerFunction)
+    this.eventList.push({ eventTarget, type: eventType, handler: handlerFunction })
+    eventTarget.addEventListener(eventType, handlerFunction)
+  }
+
+  unregisterEvent() {
+    this.eventList.forEach(item => item.eventTarget.removeEventListener(item.type, item.handler))
   }
 
   addChildrenKey(targetKey, newKey) {
@@ -601,7 +605,6 @@ export default class TreeChart {
   }
 
   setEvent() {
-    this.windowEvent = []
     const { allowFold, draggable, dragScroll } = this
     allowFold && this.setFoldEvent()
     this.setClickHook()
@@ -814,7 +817,7 @@ export default class TreeChart {
       }
     })
 
-    this.registerWindowEvent('mouseup', () => {
+    this.registerEvent('mouseup', () => {
       emitDragStart = true
       const { dragData, nodesContainer, ghostContainer } = this
 
@@ -852,7 +855,7 @@ export default class TreeChart {
       top: container.scrollTop,
       left: container.scrollLeft
     }
-    container.addEventListener('scroll', () => {
+    this.registerEvent('scroll', () => {
       const { key, ghostElement, ghostTranslateY: oldTranslateY, ghostTranslateX: oldTranslateX } = this.dragData
       const { left: oldScrollLeft, top: oldScrollTop } = oldScroll
       const { scrollLeft: currentScrollLeft, scrollTop: currentScrollTop } = container
@@ -866,7 +869,7 @@ export default class TreeChart {
       }
       oldScroll.left = currentScrollLeft
       oldScroll.top = currentScrollTop
-    })
+    }, container)
 
     this.FollowScroll = new FollowScroll({
       scrollContainer: container,
@@ -1206,7 +1209,7 @@ export default class TreeChart {
       container.scrollLeft = container.scrollLeft - e.movementX
       container.scrollTop = container.scrollTop - e.movementY
     })
-    this.registerWindowEvent('mouseup', e => {
+    this.registerEvent('mouseup', e => {
       if (e.button !== 0) return
       lock = true
     })
@@ -1214,7 +1217,7 @@ export default class TreeChart {
 
   destroy() {
     this.FollowScroll.destroy()
-    this.windowEvent.forEach(item => window.removeEventListener(item.type, item.handler))
+    this.unregisterEvent()
     this.container.innerHTML = ''
     for (const key in this) {
       this[key] = null
