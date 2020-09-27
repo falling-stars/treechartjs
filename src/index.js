@@ -4,6 +4,7 @@ import FollowScroll from './follow-scroll'
 const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
 const isNumber = data => /Number/.test(Object.prototype.toString.call(data))
 const setNotAllowEffect = node => node.classList.add('show-not-allow')
+// 求数组的交集
 const getArrayIntersection = (...arrays) => {
   const arrayCount = arrays.length
   if (arrayCount < 2) return []
