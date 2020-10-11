@@ -5,7 +5,7 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 module.exports = {
   mode: isDevelopment ? 'development' : 'production',
   entry: {
-    index: ['babel-polyfill', resolve(__dirname, `./src/${ isDevelopment ? 'test' : '' }`)]
+    index: ['babel-polyfill', resolve(__dirname, `./src/${isDevelopment ? 'test' : ''}`)]
   },
   output: {
     path: resolve(__dirname, './dist'),
