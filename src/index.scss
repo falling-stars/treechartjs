@@ -119,6 +119,7 @@
     }
   }
   .temp-children-container {
+    vertical-align: top;
     .tree-chart-node {
       &:after {
         bottom: calc(50% - 10px) !important;

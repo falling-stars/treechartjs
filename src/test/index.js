@@ -46,8 +46,8 @@ const chart = new TreeChart({
   data,
   container: document.querySelector('#demo'),
   isVertical: true,
-  distanceX: 120,
-  distanceY: 100,
+  distanceX: 80,
+  distanceY: 80,
   draggable: true,
   dragScroll: true,
   scrollTriggerDistance: 20,
@@ -81,9 +81,11 @@ const chart = new TreeChart({
   // },
   contentRender(data) {
     const container = document.createElement('div')
-    container.style.width = '290px'
-    container.style.height = '90px'
-    container.style.border = 'solid 1px'
+    const { style: containerStyle } = container
+    containerStyle.width = '230px'
+    containerStyle.height = '80px'
+    containerStyle.border = 'solid 1px'
+    containerStyle.lineHeight = '80px'
     container.innerText = data.name
     return container
   }

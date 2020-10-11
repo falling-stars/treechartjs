@@ -289,8 +289,8 @@ export default class TreeChart {
   mergeOption(data) {
     const option = {
       keyField: 'id', // 作为唯一ID的字段
-      distanceX: 60, // item的垂直间距
-      distanceY: 60, // item的水平间距
+      distanceX: 40, // item的垂直间距，不小于40
+      distanceY: 40, // item的水平间距，不小于40
       draggable: false, // 是否能拖拽item
       allowFold: false, // 是否能折叠
       dragScroll: false, // 是否开启拖拽滚动
@@ -305,12 +305,24 @@ export default class TreeChart {
       },
       ...data
     }
-    const { draggable, allowFold, dragScroll, isVertical, line, padding } = option
+    const {
+      draggable,
+      allowFold,
+      dragScroll,
+      isVertical,
+      line,
+      padding,
+      distanceX,
+      distanceY
+    } = option
+    if (distanceX < 40) option.distanceX = 40
+    if (distanceY < 40) option.distanceY = 40
     this.draggable = draggable
     this.allowFold = allowFold
     this.dragScroll = dragScroll
     this.isVertical = isVertical
     this.lineConfig = line
+    // draggable时候最小内边距不能小于30
     const containerPadding = {
       top: 30,
       right: 30,
@@ -321,7 +333,6 @@ export default class TreeChart {
     for (const key in containerPadding) {
       let paddingValue = containerPadding[key]
       if (!isNumber(paddingValue)) paddingValue = 0
-      // draggable时候最小内边距不能小于30
       if (draggable && paddingValue < 30) paddingValue = 30
       containerPadding[key] = paddingValue
     }
@@ -931,8 +942,8 @@ export default class TreeChart {
     if (dragNode.parentElement.contains(collideNode)) return 'notAllow'
 
     if (isVertical) {
-      // 位置偏左或者偏右(45%)则认为是添加兄弟节点
-      const offsetValue = (collideNodeRight - collideNodeLeft) * 0.45
+      // 位置偏左或者偏右(50%)则认为是添加兄弟节点
+      const offsetValue = (collideNodeRight - collideNodeLeft) * 0.5
       const leftPositionValue = collideNodeLeft + offsetValue
       const rightPositionValue = collideNodeRight - offsetValue
       // 在左边插入
@@ -940,8 +951,8 @@ export default class TreeChart {
       // 在右边插入
       if (ghostLeft >= rightPositionValue && allowConfig.next) return 'next'
     } else {
-      // 位置偏上或者偏下(45%)则认为是添加兄弟节点
-      const offsetValue = (collideNodeBottom - collideNodeTop) * 0.45
+      // 位置偏上或者偏下(50%)则认为是添加兄弟节点
+      const offsetValue = (collideNodeBottom - collideNodeTop) * 0.5
       const topPositionValue = collideNodeTop + offsetValue
       const bottomPositionValue = collideNodeBottom - offsetValue
       // 在上方插入
