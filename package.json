@@ -5,7 +5,7 @@
   "main": "src/dist",
   "scripts": {
     "dev": "cross-env NODE_ENV=development webpack-dev-server --progress",
-    "build": "webpack --progress"
+    "build": "rollup -c"
   },
   "repository": {
     "type": "git",
@@ -26,28 +26,19 @@
   },
   "homepage": "https://github.com/grajs/treechartjs#readme",
   "devDependencies": {
-    "@babel/core": "^7.6.4",
-    "@babel/preset-env": "^7.6.3",
-    "autoprefixer": "^9.7.0",
-    "babel": "^6.23.0",
-    "babel-loader": "^8.0.6",
-    "babel-polyfill": "^6.26.0",
-    "babel-preset-env": "^1.7.0",
-    "cross-env": "^6.0.3",
-    "css-loader": "^3.2.0",
+    "@babel/core": "^7.11.6",
+    "@babel/plugin-external-helpers": "^7.10.4",
+    "@babel/preset-env": "^7.11.5",
     "eslint": "^6.6.0",
     "eslint-config-standard": "^14.1.0",
     "eslint-plugin-import": "^2.18.2",
     "eslint-plugin-node": "^10.0.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1",
-    "html-webpack-plugin": "^3.2.0",
-    "node-sass": "^4.13.0",
-    "postcss-loader": "^3.0.0",
-    "sass-loader": "^7.3.1",
-    "style-loader": "^1.0.0",
-    "webpack": "^4.41.2",
-    "webpack-cli": "^3.3.9",
-    "webpack-dev-server": "^3.9.0"
+    "rollup": "^2.29.0",
+    "rollup-plugin-babel": "^4.4.0",
+    "rollup-plugin-postcss": "^3.1.8",
+    "rollup-plugin-scss": "^2.6.1",
+    "rollup-plugin-uglify": "^6.0.4"
   }
 }
