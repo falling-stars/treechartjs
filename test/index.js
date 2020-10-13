@@ -1,4 +1,4 @@
-import TreeChart from '../index'
+import TreeChart from '../src/index'
 
 const data = {
   name: 1,
