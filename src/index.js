@@ -298,7 +298,7 @@ export default class TreeChart {
       smooth: 50, // 光滑程度(0-100，100为直线)
       scrollSpeed: 6, // 滚动速度
       extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向),
-      isVertical: false,
+      isVertical: true,
       line: {
         type: 'bezier',
         smooth: 50
