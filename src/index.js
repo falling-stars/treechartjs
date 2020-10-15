@@ -295,7 +295,7 @@ export default class TreeChart {
       allowFold: false, // 是否能折叠
       draggable: false, // 是否能拖拽item
       dragScroll: false, // 是否开启拖拽滚动
-      scrollTriggerDistance: 50, // 触发滚动的距离
+      autoScrollTriggerDistance: 50, // 自动触发滚动的距离
       smooth: 50, // 光滑程度(0-100，100为直线)
       scrollSpeed: 6, // 滚动速度
       extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向),
@@ -764,7 +764,7 @@ export default class TreeChart {
   // 绑定拖动事件
   setDragEvent() {
     const { ghostContainer, container, nodesContainer, hooks, option } = this
-    const { scrollTriggerDistance, scrollSpeed } = option
+    const { autoScrollTriggerDistance, scrollSpeed } = option
     const { preventDrag, dragStart, dragEnd } = hooks
     // 是否触发dragStart事件
     let emitDragStart = true
@@ -885,7 +885,7 @@ export default class TreeChart {
 
     this.FollowScroll = new FollowScroll({
       scrollContainer: container,
-      scrollTriggerDistance,
+      autoScrollTriggerDistance,
       eventContainer: nodesContainer,
       scrollSpeed
     })

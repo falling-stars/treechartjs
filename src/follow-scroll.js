@@ -1,10 +1,10 @@
 export default class FollowScroll {
   constructor(option) {
-    const { scrollContainer, eventContainer, scrollTriggerDistance, scrollSpeed } = option
+    const { scrollContainer, eventContainer, autoScrollTriggerDistance, scrollSpeed } = option
     this.scrollContainer = scrollContainer
     this.eventContainer = eventContainer
     this.scrollSpeed = scrollSpeed
-    this.triggerDistance = scrollTriggerDistance || 0
+    this.triggerDistance = autoScrollTriggerDistance || 0
     this.targetNode = null
     this.interval = 0
     this.directData = {
