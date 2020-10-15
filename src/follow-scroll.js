@@ -1,9 +1,9 @@
 export default class FollowScroll {
   constructor(option) {
-    const { scrollContainer, eventContainer, autoScrollTriggerDistance, scrollSpeed } = option
+    const { scrollContainer, eventContainer, autoScrollTriggerDistance, autoScrollSpeed } = option
     this.scrollContainer = scrollContainer
     this.eventContainer = eventContainer
-    this.scrollSpeed = scrollSpeed
+    this.autoScrollSpeed = autoScrollSpeed
     this.triggerDistance = autoScrollTriggerDistance || 0
     this.targetNode = null
     this.interval = 0
@@ -47,7 +47,7 @@ export default class FollowScroll {
   }
 
   triggerScroll() {
-    const { directData, scrollContainer, scrollSpeed } = this
+    const { directData, scrollContainer, autoScrollSpeed } = this
     let existDirect = false
     for (const key in directData) {
       if (directData[key]) {
@@ -59,10 +59,10 @@ export default class FollowScroll {
     if (this.interval) return
     this.interval = setInterval(() => {
       let { scrollLeft, scrollTop } = scrollContainer
-      if (directData.left) scrollLeft -= scrollSpeed
-      if (directData.right) scrollLeft += scrollSpeed
-      if (directData.top) scrollTop -= scrollSpeed
-      if (directData.bottom) scrollTop += scrollSpeed
+      if (directData.left) scrollLeft -= autoScrollSpeed
+      if (directData.right) scrollLeft += autoScrollSpeed
+      if (directData.top) scrollTop -= autoScrollSpeed
+      if (directData.bottom) scrollTop += autoScrollSpeed
       scrollContainer.scrollLeft = scrollLeft
       scrollContainer.scrollTop = scrollTop
     }, 20)
