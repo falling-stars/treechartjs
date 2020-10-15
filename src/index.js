@@ -296,12 +296,11 @@ export default class TreeChart {
       draggable: false, // 是否能拖拽item
       dragScroll: false, // 是否开启拖拽滚动
       autoScrollTriggerDistance: 50, // 自动触发滚动的距离
-      smooth: 50, // 光滑程度(0-100，100为直线)
       scrollSpeed: 6, // 滚动速度
       extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向),
       line: {
         type: 'bezier',
-        smooth: 50
+        smooth: 50 // 光滑程度(0-100，100为直线)
       },
       ...data
     }
