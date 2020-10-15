@@ -289,16 +289,16 @@ export default class TreeChart {
   mergeOption(data) {
     const option = {
       keyField: 'id', // 作为唯一ID的字段
+      isVertical: true,
       distanceX: 40, // item的垂直间距，不小于40
       distanceY: 40, // item的水平间距，不小于40
-      draggable: false, // 是否能拖拽item
       allowFold: false, // 是否能折叠
+      draggable: false, // 是否能拖拽item
       dragScroll: false, // 是否开启拖拽滚动
       scrollTriggerDistance: 50, // 触发滚动的距离
       smooth: 50, // 光滑程度(0-100，100为直线)
       scrollSpeed: 6, // 滚动速度
       extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向),
-      isVertical: true,
       line: {
         type: 'bezier',
         smooth: 50
