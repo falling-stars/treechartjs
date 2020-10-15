@@ -11,7 +11,7 @@ export default {
   input: isDev ? 'test/index.js' : 'src/index.js',
   output: {
     file: 'dist/index.js',
-    format: isDev ? 'iife' : 'cjs',
+    format: isDev ? 'iife' : 'esm',
     exports: isDev ? 'auto' : 'default'
   },
   plugins: [scss()].concat(
