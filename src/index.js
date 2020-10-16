@@ -297,7 +297,6 @@ export default class TreeChart {
       dragScroll: false, // 是否开启拖拽滚动
       autoScrollTriggerDistance: 50, // 自动触发滚动的距离
       autoScrollSpeed: 6, // 滚动速度
-      extendSpace: 0, // 实际内容之外的扩展距离(目前只支持水平方向),
       line: {
         type: 'bezier',
         smooth: 50 // 光滑程度(0-100，100为直线)
@@ -1158,8 +1157,7 @@ export default class TreeChart {
   }
 
   resize() {
-    const { option, nodesContainer, linkContainer, draggable, ghostContainer, rootNode, isVertical } = this
-    const { extendSpace } = option
+    const { nodesContainer, linkContainer, draggable, ghostContainer, rootNode, isVertical } = this
     const { style: nodesContainerStyle } = nodesContainer
     const { style: linkContainerStyle } = linkContainer
 
@@ -1177,9 +1175,9 @@ export default class TreeChart {
     if (draggable) {
       const { width: rootNodeWidth, height: rootNodeHeight } = rootNode.getBoundingClientRect()
       if (isVertical) {
-        height += extendSpace > rootNodeHeight ? extendSpace : rootNodeHeight
+        height += rootNodeHeight
       } else {
-        width += extendSpace > rootNodeWidth ? extendSpace : rootNodeWidth
+        width += rootNodeWidth
       }
     }
 

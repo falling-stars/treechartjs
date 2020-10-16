@@ -45,13 +45,13 @@ const data = {
 const chart = new TreeChart({
   data,
   container: document.querySelector('#demo'),
+  // isVertical: false,
   distanceX: 80,
   distanceY: 80,
   draggable: true,
   dragScroll: true,
   autoScrollTriggerDistance: 20,
   allowFold: true,
-  // extendSpace: 392,
   // line: {
   //   type: 'broken'
   // },
