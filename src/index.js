@@ -447,7 +447,7 @@ export default class TreeChart {
         renderContainer.innerText = 'Please check contentRender return type is string or element'
       }
     } else {
-      renderContainer.innerText = 'Please set contentRender function'
+      renderContainer.innerText = 'option.contentRender is required'
     }
     node.appendChild(renderContainer)
 
