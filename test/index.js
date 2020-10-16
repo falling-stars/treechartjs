@@ -55,7 +55,7 @@ const chart = new TreeChart({
   // line: {
   //   type: 'broken'
   // },
-  dragControl(data) {
+  nodeControl(data) {
     return {
       draggable: data.id !== 12,
       insertChild: data.id !== 12,

@@ -341,7 +341,7 @@ export default class TreeChart {
 
   initHooks() {
     const controlHooks = [
-      'dragControl',
+      'nodeControl',
       'preventDrag'
     ]
     const eventHooks = [
@@ -424,7 +424,7 @@ export default class TreeChart {
   createNode(data) {
     const { draggable, hooks, option } = this
     const { distanceX, distanceY } = option
-    const { contentRender, dragControl } = hooks
+    const { contentRender, nodeControl } = hooks
 
     const node = document.createElement('div')
     const key = this.getKeyField(data)
@@ -455,13 +455,13 @@ export default class TreeChart {
     this.setNodeEvent(node)
 
     // 拖拽控制
-    if (draggable && dragControl) {
+    if (draggable && nodeControl) {
       const controlConfig = {
         draggable: true,
         insertChild: true,
         insertPrevious: true,
         insertNext: true,
-        ...dragControl(data)
+        ...nodeControl(data)
       }
       !controlConfig.draggable && node.classList.add('not-allow-drag')
       !controlConfig.insertChild && node.classList.add('not-allow-insert-child')
