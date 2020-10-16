@@ -457,13 +457,13 @@ export default class TreeChart {
     // 拖拽控制
     if (draggable && dragControl) {
       const controlConfig = {
-        drag: true,
+        draggable: true,
         insertChild: true,
         insertPrevious: true,
         insertNext: true,
         ...dragControl(data)
       }
-      !controlConfig.drag && node.classList.add('not-allow-drag')
+      !controlConfig.draggable && node.classList.add('not-allow-drag')
       !controlConfig.insertChild && node.classList.add('not-allow-insert-child')
       !controlConfig.insertPrevious && node.classList.add('not-allow-insert-previous')
       !controlConfig.insertNext && node.classList.add('not-allow-insert-next')
