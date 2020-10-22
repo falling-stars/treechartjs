@@ -71,7 +71,7 @@ export default class TreeChart {
     return Boolean(nodeElement.getAttribute('data-children'))
   }
 
-  insertNode(targetKey, origin, type, unReloadLink) {
+  insertNode(targetKey, origin, type) {
     const targetNode = this.getNodeElement(targetKey)
     // 限制不能给根节点添加兄弟元素
     if (/next|previous/.test(type) && targetNode === this.rootNode) return
@@ -127,7 +127,7 @@ export default class TreeChart {
       this.addChildrenKey(targetParentKey, originKey)
     }
 
-    !unReloadLink && this.reloadLink()
+    this.reloadLink()
   }
 
   removeNode(targetKey) {
