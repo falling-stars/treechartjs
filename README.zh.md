@@ -14,11 +14,15 @@ yarn add treechartjs
 ## 使用方法
 ```javascript
 import TreeChart from 'treechartjs'
+import 'treechartjs/dist/index.css'
+
 const chart = new TreeChart(...option)
 ```
 example:
 ```javascript
 import TreeChart from 'treechartjs'
+import 'treechartjs/dist/index.css'
+
 const chart = new TreeChart({
   data: [/*tree data*/],
   container: document.querySelector('.target'), /*chart container HTMLElement*/
