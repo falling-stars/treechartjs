@@ -147,12 +147,6 @@ Default: `50`
 
 正在拖拽的节点如果靠近边界，并且还有剩余节点没有显示的情况下会触发自动滚动，默认情况下拖拽节点与边界的距离小于`50px`会触发滚动，通过设置`autoScrollTriggerDistance`来改变这个临界值，这个值必须大于`0`
 
-#### extendSpace
-Type: `Number`
-Default: `<nodeHeight> or <nodeWidth>`
-
-正在拖拽的节点如果靠近边界，并且还有剩余节点没有显示的情况下会触发自动滚动，默认情况下拖拽节点与边界的距离小于`50px`会触发滚动，通过设置`autoScrollTriggerDistance`来改变这个临界值，这个值必须大于`0`
-
 #### line
 Type: `Object`
 Default: `{ type: 'bezier', smooth: 50 }`
@@ -243,11 +237,11 @@ Default: `undefined`
     }
 }
 ```
-`params.key`代表被拖拽的节点的key
+`params.key`：代表被拖拽的节点的key
 
-`params.target`代表目标节点(被碰撞的节点)的key
+`params.target`：代表目标节点(被碰撞的节点)的key
 
-`params.type`可能的值有：`previous`、`next`和`child`
+`params.type`：可能的值有：`previous`、`next`和`child`
 
 `params.from`和`params.to`代表了节点移动前和移动后的位置信息
 
@@ -305,7 +299,7 @@ chart.getNodeElement('1') // HTMLElement
 
 `getKeyByElement(nodeElement: HTMLElement): HTMLElement`
 
-根据传入的`nodeElement`节点对应的`nodeKey`
+获取`nodeElement`节点对应的`nodeKey`
 ```javascript
 chart.getKeyByElement(document.querySelector('.tree-chart-item-1')) // nodeKey: 1
 ```
@@ -350,7 +344,7 @@ chart.getChildrenKeys('1') // nodeKeys: ['1', '2']
 
 `existChildren(nodeKey: string): boolean`
 
-根据传入的`nodeKey`判断是否有子节点
+判断`nodeKey`对应的节点是否存在子节点
 ```javascript
 chart.existChildren('1') // true
 ```
@@ -384,7 +378,7 @@ chart.insertNode('1', newNodeData, 'child') // 为key为1的节点创建一个�
 
 `removeNode(nodeKey: string): void`
 
-根据传入的`nodeKey`移除节点
+删除`nodeKey`对应的节点
 ```javascript
 chart.removeNode('3') // key为3的节点被删除
 ```
@@ -402,7 +396,7 @@ chart.nodeIsFold('2') // false
 
 `toggleFold(nodeKey: string): void`
 
-`nodeKey`对应的节点会切换折叠状态
+`nodeKey`对应的节点会改变折叠状态
 ```javascript
 chart.toggleFold('2')
 ```
