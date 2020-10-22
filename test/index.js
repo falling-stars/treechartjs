@@ -52,6 +52,7 @@ const chart = new TreeChart({
   dragScroll: true,
   autoScrollTriggerDistance: 20,
   allowFold: true,
+  foldNodeKeys: ['122'],
   // line: {
   //   type: 'broken'
   // },

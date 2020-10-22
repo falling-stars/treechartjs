@@ -293,6 +293,7 @@ export default class TreeChart {
       distanceX: 40, // item的垂直间距，不小于40
       distanceY: 40, // item的水平间距，不小于40
       allowFold: false, // 是否能折叠
+      foldNodeKeys: [], // 初始需要折叠的节点
       draggable: false, // 是否能拖拽item
       dragScroll: false, // 是否开启拖拽滚动
       autoScrollTriggerDistance: 50, // 自动触发滚动的距离
@@ -395,21 +396,31 @@ export default class TreeChart {
 
   // 数据数据结构生成节点
   createNodes(data, parentNodeContainer, reRender) {
-    const { allowFold, rootNode } = this
+    const { allowFold, rootNode, option } = this
     const { children } = data
+    const { foldNodeKeys } = option
     const existChildren = Array.isArray(children) && children.length > 0
 
     // 创建节点
     const node = this.createNode(data)
-    allowFold && existChildren && this.createFoldButton(node)
     parentNodeContainer.appendChild(node)
 
     // 初始化或重新渲染的时候
     if (!rootNode || reRender) this.rootNode = node
 
     if (existChildren) {
-      const childKeys = []
       const childrenContainer = this.createChildrenContainer()
+      parentNodeContainer.appendChild(childrenContainer)
+      if (allowFold) {
+        const foldButton = this.createFoldButton(node)
+        // 节点需要初始折叠
+        if (foldNodeKeys.includes(this.getKeyField(data))) {
+          foldButton.classList.add('is-fold')
+          childrenContainer.classList.add('is-hidden')
+        }
+      }
+
+      const childKeys = []
       children.forEach(childData => {
         childKeys.push(this.getKeyField(childData))
         const childNodeContainer = this.createNodeContainer()
@@ -417,7 +428,6 @@ export default class TreeChart {
         this.createNodes(childData, childNodeContainer)
       })
       node.setAttribute('data-children', childKeys.join())
-      parentNodeContainer.appendChild(childrenContainer)
     }
   }
 
@@ -488,6 +498,7 @@ export default class TreeChart {
     button.classList.add('tree-chart-unfold')
     button.innerHTML = '<div></div><div></div>'
     nodeElement.appendChild(button)
+    return button
   }
 
   getFoldButton(targetKey) {
