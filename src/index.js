@@ -22,7 +22,7 @@ const getArrayIntersection = (...arrays) => {
 }
 
 export default class TreeChart {
-  /* API */
+  /*  ======== API ======== */
   getKeyByElement(nodeElement) {
     if (!isElement(nodeElement)) return null
     return nodeElement.classList.contains('tree-chart-node') ? nodeElement.getAttribute('data-key') : null
@@ -218,6 +218,8 @@ export default class TreeChart {
     // 更新links
     this.reloadLink()
   }
+
+  /* ================ */
 
   // 需要取消注册的才使用该函数
   registerEvent(eventType, handler, eventTarget = window) {
