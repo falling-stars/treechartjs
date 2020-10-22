@@ -2,7 +2,7 @@
   "name": "treechartjs",
   "version": "0.0.1",
   "description": "",
-  "main": "src/dist",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "cross-env NODE_ENV=development rollup -c --watch",
     "build": "rollup -c"
