@@ -45,7 +45,7 @@ const data = {
 const chart = new TreeChart({
   data,
   container: document.querySelector('#demo'),
-  // isVertical: false,
+  isVertical: false,
   distanceX: 80,
   distanceY: 80,
   draggable: true,
@@ -64,21 +64,9 @@ const chart = new TreeChart({
       insertNext: data.id !== 12
     }
   },
-  dragStart() {
-    console.log('dragstart')
+  preventDrag(data) {
+    return data.key === '14'
   },
-  dragEnd(data) {
-    console.log('dragend', data)
-  },
-  click() {
-    console.log('click')
-  },
-  // mouseEnter(data) {
-  //   console.log('enter', data)
-  // },
-  // mouseLeave(data) {
-  //   console.log('leave', data)
-  // },
   contentRender(data) {
     const container = document.createElement('div')
     const { style: containerStyle } = container
@@ -88,9 +76,26 @@ const chart = new TreeChart({
     containerStyle.lineHeight = '80px'
     container.innerText = data.name
     return container
+  },
+  hook: {
+    dragStart() {
+      console.log('dragstart')
+    },
+    dragEnd() {
+      console.log('dragend')
+    },
+    click() {
+      console.log('click')
+    },
+    mouseEnter() {
+      console.log('enter')
+    },
+    mouseLeave() {
+      console.log('leave')
+    }
   }
 })
-
+console.log(chart)
 document.querySelector('.re-render').addEventListener('click', () => {
   chart.reRender(data)
 })
