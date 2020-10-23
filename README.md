@@ -1,6 +1,8 @@
 # treechartjs
 `treechartjs` can generate tree diagrams based on structured data, and supports node expansion/collapse. Nodes can be edited through API or drag-and-drop behavior. Its size is very small and has no dependencies. The size after construction is only 25KB.
-![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/vertical.gif?token=AG5SFF6DD45NJX7ZLPOLYCK7RGI6Q)
+[[中文文档](https://github.com/grajs/treechartjs/blob/master/doc/README.zh.md)]
+
+![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
 
 ## Installation
 ```sh
@@ -106,7 +108,7 @@ Default: `true`
 
 The arrangement direction of the tree, the default arrangement is vertical, if set to `false`, it will be arranged horizontally:
 
-![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/normal.gif?token=AG5SFF7H3CL6VMSPFYPKE3C7RGJBM)
+![image](https://i.loli.net/2020/10/23/kV2IuimL1jG8rX7.gif)
 
 #### distanceX
 Type: `Number`
@@ -143,7 +145,7 @@ Type: `Boolean`
 Default: `false`
 
 After set to `true`, you can drag non-node areas to trigger interface scrolling:
-![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/drag-scroll.gif?token=AG5SFF7CVLEKJK53OCFY6G27RGI4M)
+![image](https://i.loli.net/2020/10/23/BAYascS3EQZ9CVW.gif)
 
 #### autoScrollTriggerDistance
 Type: `Number`
@@ -162,9 +164,9 @@ Type: `String`
 
 type | example
 ---|---
-straight | ![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/straight.png?token=AG5SFF24OEFA2T3Z5S4WEA27RGJI4)
-broken | ![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/broken.png?token=AG5SFF5LN6XGSVLYYEACI3K7RGJG4)
-bezier | ![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/bezier.png?token=AG5SFF5FLYS73T7PBYBP5HK7RGJDO)
+straight | ![image](https://i.loli.net/2020/10/23/VDMJEN7GqZktCIx.png)
+broken | ![image](https://i.loli.net/2020/10/23/pId6uWJKPc3xZfi.png)
+bezier | ![image](https://i.loli.net/2020/10/23/FdHPjwbN7p3fTsQ.png)
 
 ##### line.smooth
 Type: `Number`

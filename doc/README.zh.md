@@ -1,6 +1,7 @@
 # treechartjs
 `treechartjs`可以根据结构化数据生成树形图，并且支持节点展开/收起，通过API或拖拽行为对节点进行编辑，他的体积非常小没有任何依赖，构建后的大小仅为25KB。
-![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/vertical.gif?token=AG5SFF6DD45NJX7ZLPOLYCK7RGI6Q)
+
+![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
 
 ## 安装
 ```sh
@@ -106,7 +107,7 @@ Default: `true`
 
 树的排布方向，默认垂直排布，如果设置为`false`，将会横向排布:
 
-![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/normal.gif?token=AG5SFF7H3CL6VMSPFYPKE3C7RGJBM)
+![image](https://i.loli.net/2020/10/23/kV2IuimL1jG8rX7.gif)
 
 #### distanceX
 Type: `Number`
@@ -143,7 +144,7 @@ Type: `Boolean`
 Default: `false`
 
 设置为`true`后可以拖拽非节点区域触发界面滚动:
-![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/drag-scroll.gif?token=AG5SFF7CVLEKJK53OCFY6G27RGI4M)
+![image](https://i.loli.net/2020/10/23/BAYascS3EQZ9CVW.gif)
 
 #### autoScrollTriggerDistance
 Type: `Number`
@@ -162,9 +163,9 @@ Type: `String`
 
 type | example
 ---|---
-straight | ![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/straight.png?token=AG5SFF24OEFA2T3Z5S4WEA27RGJI4)
-broken | ![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/broken.png?token=AG5SFF5LN6XGSVLYYEACI3K7RGJG4)
-bezier | ![image](https://raw.githubusercontent.com/grajs/treechartjs/master/docs/images/bezier.png?token=AG5SFF5FLYS73T7PBYBP5HK7RGJDO)
+straight | ![image](https://i.loli.net/2020/10/23/VDMJEN7GqZktCIx.png)
+broken | ![image](https://i.loli.net/2020/10/23/pId6uWJKPc3xZfi.png)
+bezier | ![image](https://i.loli.net/2020/10/23/FdHPjwbN7p3fTsQ.png)
 
 ##### line.smooth
 Type: `Number`
