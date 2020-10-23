@@ -257,8 +257,8 @@ Default: `undefined`
 节点被点击时会触发`option.click`方法
 ```javascript
 {
-    click(params) {
-        console.log(params) // { element, key }
+    click(params, event) {
+        console.log(params, event) // ({ element, key }, event)
     }
 }
 ```
@@ -270,8 +270,8 @@ Default: `undefined`
 鼠标进入节点区域时会触发`option.mouseEnter`方法
 ```javascript
 {
-    mouseEnter(params) {
-        console.log(params) // { element, key }
+    mouseEnter(params, event) {
+        console.log(params, event) // ({ element, key }, event)
     }
 }
 ```
@@ -283,8 +283,8 @@ Default: `undefined`
 鼠标离开节点区域时会触发`option.mouseLeave`方法
 ```javascript
 {
-    mouseLeave(params) {
-        console.log(params) // { element, key }
+    mouseLeave(params, event) {
+        console.log(params, event) // ({ element, key }, event)
     }
 }
 ```

@@ -258,8 +258,8 @@ Default: `undefined`
 The `option.click` method will be triggered when the node is clicked
 ```javascript
 {
-    click(params) {
-        console.log(params) // { element, key }
+    click(params, event) {
+        console.log(params, event) // ({ element, key }, event)
     }
 }
 ```
@@ -271,8 +271,8 @@ Default: `undefined`
 The `option.mouseEnter` method will be triggered when the mouse enters the node area
 ```javascript
 {
-    mouseEnter(params) {
-        console.log(params) // { element, key }
+    mouseEnter(params, event) {
+        console.log(params, event) // ({ element, key }, event)
     }
 }
 ```
@@ -284,8 +284,8 @@ Default: `undefined`
 The `option.mouseLeave` method will be triggered when the mouse leaves the node area
 ```javascript
 {
-    mouseLeave(params) {
-        console.log(params) // { element, key }
+    mouseLeave(params, event) {
+        console.log(params, event) // ({ element, key }, event)
     }
 }
 ```
