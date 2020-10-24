@@ -1,6 +1,5 @@
 # treechartjs
 `treechartjs` can generate tree diagrams based on structured data, and supports node expansion/collapse. Nodes can be edited through API or drag-and-drop behavior. Its size is very small and has no dependencies. The size after construction is only 25KB.
-[[中文文档](https://github.com/grajs/treechartjs/blob/master/doc/README.zh.md)]
 
 ![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
 
@@ -35,13 +34,13 @@ const chart = new TreeChart({
 ```
 
 ## Option
-#### keyField
+### keyField
 Type: `String`
 Default: `'id'`
 
 The attribute used to identify the node. The uniqueness of the attribute needs to be guaranteed. If there are duplicate values, it will cause problems in the use process. The value of the attribute must be of type `string`
 
-#### data
+### data
 Type: `Array`
 Default: `undefined`
 
@@ -69,13 +68,13 @@ Among them, `id` and `children` are required, `children` is an `Array` type, `id
     },
 ```
 
-#### container
+### container
 Type: `HTMLElement`
 Default: `undefined`
 
 The parent element of the chart. After initialization, the class name of `tree-chart` will be added. If there are too many nodes, you can set `overflow: auto` to scroll through.
 
-#### contentRender
+### contentRender
 Type: `Function`
 Default: `undefined`
 
@@ -91,7 +90,7 @@ example:
     }
 }
 ```
-or
+or 
 ```javascript
 {
     contentRender(data) {
@@ -102,7 +101,7 @@ or
 
 
 
-#### isVertical
+### isVertical
 Type: `Boolean`
 Default: `true`
 
@@ -110,50 +109,50 @@ The arrangement direction of the tree, the default arrangement is vertical, if s
 
 ![image](https://i.loli.net/2020/10/23/kV2IuimL1jG8rX7.gif)
 
-#### distanceX
+### distanceX
 Type: `Number`
 Default: `40`
 
-The horizontal distance between two nodes, this value cannot be less than 40
+The horizontal distance between two nodes, this value cannot be less than `40`
 
-#### distanceY
+### distanceY
 Type: `Number`
 Default: `40`
 
-The vertical distance between two nodes, this value cannot be less than 40
+The vertical distance between two nodes, this value cannot be less than `40`
 
-#### allowFold
+### allowFold
 Type: `Boolean`
 Default: `false`
 
 Whether child nodes can be collapsed, if set to `true`, they can be expanded and collapsed by clicking or using API
 
-#### foldNodeKeys
+### foldNodeKeys
 Type: `Array`
 Default: `[]`
 
 Nodes that need to be collapsed in the initial state, if there is a corresponding node in the passed `key`, the child nodes of the node will be collapsed
 
-#### draggable
+### draggable
 Type: `Boolean`
 Default: `false`
 
 Set to `true` to enable node dragging function
 
-#### dragScroll
+### dragScroll
 Type: `Boolean`
 Default: `false`
 
 After set to `true`, you can drag non-node areas to trigger interface scrolling:
 ![image](https://i.loli.net/2020/10/23/BAYascS3EQZ9CVW.gif)
 
-#### autoScrollTriggerDistance
+### autoScrollTriggerDistance
 Type: `Number`
 Default: `50`
 
-If the dragging node is close to the boundary and there are remaining nodes that are not displayed, automatic scrolling will be triggered. By default, the distance between the dragging node and the boundary will be triggered if the distance is less than `50px`. This can be changed by setting `autoScrollTriggerDistance` Critical value, this value must be greater than `0`
+If the dragging node is close to the boundary and there are remaining nodes that are not displayed, automatic scrolling will be triggered. By default, if the distance between the dragging node and the boundary is less than `50px`, scrolling will be triggered. This critical value can be changed by setting `autoScrollTriggerDistance`, this value must be greater than `0`
 
-#### line
+### line
 Type: `Object`
 Default: `{ type: 'bezier', smooth: 50 }`
 
@@ -171,13 +170,13 @@ bezier | ![image](https://i.loli.net/2020/10/23/FdHPjwbN7p3fTsQ.png)
 ##### line.smooth
 Type: `Number`
 
-Only effective when `line.type === bezier`, the value is between `0~100`, the connecting line will become a straight line when `line.smooth === 100`
+To enable this configuration, you need to set `line.type === bezier`, the value of `smooth` is between `0~100`, and the connection line will become when `line.smooth === 100` straight line
 
-#### nodeControl
+### nodeControl
 Type: `Function`
 Default: `undefined`
 
-In the case of `option.draggable === true`, through `option.nodeControl` you can control whether the node can be dragged and inserted into child nodes or adjacent nodes
+To enable this configuration, you need to first set `option.draggable === true`, through `option.nodeControl` you can control whether the node can be dragged and inserted into child nodes or adjacent nodes
 ```javascript
 {
     nodeControl(data) {
@@ -191,7 +190,7 @@ In the case of `option.draggable === true`, through `option.nodeControl` you can
 }
 ```
 
-Make the node with ʻid === 1` unable to be dragged:
+Make the node with `id === 1` unable to be dragged:
 ```javascript
 {
     nodeControl(data) {
@@ -204,11 +203,11 @@ Make the node with ʻid === 1` unable to be dragged:
 
 Note: `nodeControl` can only limit the dragging behavior of the mouse, but not the `chart.insertNode` method
 
-#### preventDrag
+### preventDrag
 Type: `Function`
 Default: `undefined`
 
-In the case of `option.draggable === true`, `option.preventDrag` will be triggered before the node is dragged. If the return value is `true`, the drag of the current node will be prevented. Unlike `option.nodeControl`, `option.nodeControl` will only be executed during the initialization phase, but `option.preventDrag` will be executed before each drag.
+To enable this configuration, you need to set `option.draggable === true` first, and `option.preventDrag` will be triggered before the node is dragged. If the return value is `true`, the dragging of the current node will be prevented. Unlike `option.nodeControl`, `option.nodeControl` will only be executed during the initialization phase, but ʻoption.preventDrag` will be executed before each drag.
 
 Make the node with `id === 1` blocked before dragging:
 ```javascript
@@ -218,28 +217,45 @@ Make the node with `id === 1` blocked before dragging:
     }
 }
 ```
-#### dragStart
+### hook
+Type: `Object`
+Default: `{}`
+
+```javascript
+{
+    hook: {
+        dragStart() {/* something */},
+        dragEnd() {/* something */}
+    }
+}
+```
+
+##### hook.dragStart
 Type: `Function`
 Default: `undefined`
 
 The `option.dragStart` method will be triggered when the dragging behavior of the node starts
 ```javascript
 {
-    dragStart(params) {
-        console.log(data) // { element, key }
+    hook: {
+        dragStart(params) {
+            console.log(data) // { element, key }
+        }
     }
 }
 ```
 
-#### dragEnd
+##### hook.dragEnd
 Type: `Function`
 Default: `undefined`
 
 The dragging behavior of the node stops and the position change will trigger the `option.dragEnd` method
 ```javascript
 {
-    dragEnd(params) {
-        console.log(params) // { key, target, type, from, to }
+    hook: {
+        dragEnd(params) {
+            console.log(params) // { key, target, type, from, to }
+        }
     }
 }
 ```
@@ -249,43 +265,64 @@ The dragging behavior of the node stops and the position change will trigger the
 
 `params.type`: possible values are: `previous`, `next` and `child`
 
-`params.from` and `params.to`: represents the location information before and after the node moves
+`params.from` and `params.to` represents the location information before and after the node moves
 
-#### click
+##### hook.click
 Type: `Function`
 Default: `undefined`
 
 The `option.click` method will be triggered when the node is clicked
 ```javascript
 {
-    click(params, event) {
-        console.log(params, event) // ({ element, key }, event)
+    hook: {
+        click(params, event) {
+            console.log(params, event) // ({ element, key }, event)
+        }
     }
 }
 ```
 
-#### mouseEnter
+##### hook.mouseEnter
 Type: `Function`
 Default: `undefined`
 
 The `option.mouseEnter` method will be triggered when the mouse enters the node area
 ```javascript
 {
-    mouseEnter(params, event) {
-        console.log(params, event) // ({ element, key }, event)
+    hook: {
+        mouseEnter(params, event) {
+            console.log(params, event) // ({ element, key }, event)
+        }
     }
 }
 ```
 
-#### mouseLeave
+##### hook.mouseLeave
 Type: `Function`
 Default: `undefined`
 
 The `option.mouseLeave` method will be triggered when the mouse leaves the node area
 ```javascript
 {
-    mouseLeave(params, event) {
-        console.log(params, event) // ({ element, key }, event)
+    hook: {
+        mouseLeave(params, event) {
+            console.log(params, event) // ({ element, key }, event)
+        }
+    }
+}
+```
+
+##### hook.foldChange
+Type: `Function`
+Default: `undefined`
+
+`option.foldChange` will be triggered when the node folding state changes
+```javascript
+{
+    hook: {
+        foldChange(nodeKey, isFold) {
+            console.log(nodeKey, isFold) // ('2', true)
+        }
     }
 }
 ```
@@ -386,7 +423,7 @@ chart.insertNode('1', newNodeData, 'child') // Create a new child node for the n
 
 Delete the node corresponding to `nodeKey`
 ```javascript
-chart.removeNode('3') // The node with key 3 is deleted
+chart.removeNode('3') // key为3的节点被删除
 ```
 
 #### nodeIsFold
@@ -418,7 +455,7 @@ const nodeData = {
     name: 'jeck',
     age: 32
 }
-chart.reRenderNode('2', nodeData) // The node with key 2 is re-rendered
+chart.reRenderNode('2', nodeData) // key为2的节点被重新渲染
 ```
 
 #### reloadLink

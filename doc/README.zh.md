@@ -54,7 +54,7 @@ Default: `undefined`
         }]
     },
 ```
-其中`id`和`children`是必须的，`children`是一个`array`类型,`id`可以替换为`keyField`所定义的值，可以增加其他自定义属性提供给`contentRender`使用:
+其中`id`和`children`是必须的，`children`是一个`Array`类型,`id`可以替换为`keyField`所定义的值，可以增加其他自定义属性提供给`contentRender`使用:
 ```javascript
     {
       id: '1',
@@ -113,13 +113,13 @@ Default: `true`
 Type: `Number`
 Default: `40`
 
-两个节点间的水平间距，这个值不能小于40
+两个节点间的水平间距，这个值不能小于`40`
 
 ### distanceY
 Type: `Number`
 Default: `40`
 
-两个节点间的垂直间距，这个值不能小于40
+两个节点间的垂直间距，这个值不能小于`40`
 
 ### allowFold
 Type: `Boolean`
