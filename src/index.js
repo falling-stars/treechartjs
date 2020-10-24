@@ -1,25 +1,6 @@
 import './index.scss'
 import FollowScroll from './follow-scroll'
-
-const isElement = data => /HTML/.test(Object.prototype.toString.call(data)) && data.nodeType === 1
-const isNumber = data => /Number/.test(Object.prototype.toString.call(data))
-const setNotAllowEffect = node => node.classList.add('show-not-allow')
-// 求数组的交集
-const getArrayIntersection = (...arrays) => {
-  const arrayCount = arrays.length
-  if (arrayCount < 2) return []
-  const result = []
-  const countMap = {}
-  arrays.reduce((a, b) => a.concat(b), []).forEach(item => {
-    if (countMap[item]) {
-      countMap[item]++
-      countMap[item] === arrayCount && result.push(item)
-    } else {
-      countMap[item] = 1
-    }
-  })
-  return result
-}
+import { isElement, isNumber, getArrayIntersection, applyStyle } from './utils'
 
 export default class TreeChart {
   /*  ======== API ======== */
@@ -175,7 +156,7 @@ export default class TreeChart {
 
     // 更新key
     if (newNodeKey !== oldNodeKey) {
-      const { linkContainer } = this
+      const { linkContainer } = this.elements
       const parentNodeKey = this.getParentKey(oldNodeKey)
       // 替换父节点的children-key
       this.replaceChildrenKey(parentNodeKey, oldNodeKey, newNodeKey)
@@ -209,10 +190,9 @@ export default class TreeChart {
   }
 
   reRender(data) {
-    const { elements } = this
-    const { nodesContainer } = elements
+    const { nodesContainer } = this.elements
     // 更新nodes
-    elements.rootNode = null
+    this.elements.rootNode = null
     nodesContainer.innerHTML = ''
     const nodeContainer = this.createNodeContainer()
     nodesContainer.appendChild(nodeContainer)
@@ -284,13 +264,13 @@ export default class TreeChart {
   }
 
   constructor(option) {
-    this.mergeOption(option)
+    this.initData(option)
     this.createChartElement()
     this.resize()
     this.setEvent()
   }
 
-  mergeOption(data) {
+  initData(inputOption) {
     const option = {
       keyField: 'id', // 作为唯一ID的字段
       isVertical: true,
@@ -307,7 +287,7 @@ export default class TreeChart {
         smooth: 50 // 光滑程度(0-100，100为直线)
       },
       hook: {},
-      ...data
+      ...inputOption
     }
     const {
       draggable,
@@ -342,7 +322,13 @@ export default class TreeChart {
     }
     this.containerPadding = containerPadding
     this.option = option
-    this.elements = {}
+    this.elements = {
+      container: null,
+      ghostContainer: null,
+      nodesContainer: null,
+      linkContainer: null,
+      rootNode: null
+    }
     this.initHook()
   }
 
@@ -440,8 +426,10 @@ export default class TreeChart {
     const key = this.getKeyField(data)
     node.classList.add('tree-chart-node', `tree-chart-item-${key}`)
     node.setAttribute('data-key', key)
-    node.style.marginBottom = `${distanceY}px`
-    node.style.marginRight = `${distanceX}px`
+    applyStyle(node, {
+      marginBottom: `${distanceY}px`,
+      marginRight: `${distanceX}px`
+    })
 
     const renderContainer = document.createElement('div')
     renderContainer.classList.add('tree-render-container')
@@ -511,16 +499,16 @@ export default class TreeChart {
   }
 
   createLinkContainer() {
-    const linkContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    linkContainer.classList.add('tree-chart-link-container')
-    this.elements.container.appendChild(linkContainer)
-    this.linkContainer = linkContainer
+    const svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svgElement.classList.add('tree-chart-link-container')
+    this.elements.container.appendChild(svgElement)
+    this.elements.linkContainer = svgElement
   }
 
   // 根据节点间父子关系生成连线信息，同时生成节点位置数据
   createLink() {
-    const { linkContainer, draggable, isVertical, elements } = this
-    const { container, nodesContainer } = elements
+    const { draggable, isVertical } = this
+    const { container, nodesContainer, linkContainer } = this.elements
     const { left: containerLeft, top: containerTop } = container.getBoundingClientRect()
     const { scrollLeft, scrollTop } = container
 
@@ -641,8 +629,9 @@ export default class TreeChart {
 
   // 两点间连线
   drawLine(from, to, isTemp) {
-    const { linkContainer, isVertical, allowFold, lineConfig } = this
-    const { type: lineType, smooth } = lineConfig
+    const { isVertical, allowFold } = this
+    const { linkContainer } = this.elements
+    const { type: lineType, smooth } = this.lineConfig
 
     const lineClassName = `line-${from.key}-${to.key}`
     let link = document.querySelector(`.${lineClassName}`)
@@ -713,9 +702,8 @@ export default class TreeChart {
   }
 
   setClickHook() {
-    const { hooks, elements } = this
-    const { nodesContainer } = elements
-    const { click: clickHook } = hooks
+    const { nodesContainer } = this.elements
+    const { click: clickHook } = this.hooks
     if (!clickHook) return
     // 用mouseEvent来实现click主要是为了区别dragStart和click的行为
     let mouseDownNode = null
@@ -772,10 +760,9 @@ export default class TreeChart {
 
   // 绑定拖动事件
   setDragEvent() {
-    const { hooks, option, elements } = this
-    const { autoScrollTriggerDistance, autoScrollSpeed, preventDrag } = option
-    const { dragStart, dragEnd } = hooks
-    const { container, nodesContainer, ghostContainer } = elements
+    const { autoScrollTriggerDistance, autoScrollSpeed, preventDrag } = this.option
+    const { container, nodesContainer, ghostContainer } = this.elements
+    const { dragStart, dragEnd } = this.hooks
     // 是否触发dragStart事件
     let emitDragStart = true
 
@@ -788,7 +775,7 @@ export default class TreeChart {
       const dragNodeKey = this.getKeyByElement(dragNode)
 
       // 根节点不允许拖动
-      if (!dragNode || dragNode === elements.rootNode) return
+      if (!dragNode || dragNode === this.elements.rootNode) return
       // 用户禁止拖动的节点
       if (dragNode.classList.contains('not-allow-drag')) return
       // preventDrag返回true时阻止拖动
@@ -841,13 +828,11 @@ export default class TreeChart {
 
     this.registerEvent('mouseup', () => {
       emitDragStart = true
-      const { dragData, elements } = this
-      const { nodesContainer, ghostContainer } = elements
+      const { key: dragKey } = this.dragData
+      if (!dragKey) return
 
       let targetKey = ''
       let type = ''
-      const dragKey = dragData.key
-      if (!dragKey) return
 
       const targetNode = nodesContainer.querySelector('.collide-node')
       if (targetNode) {
@@ -878,10 +863,10 @@ export default class TreeChart {
       top: container.scrollTop,
       left: container.scrollLeft
     }
-    this.registerEvent('scroll', () => {
+    this.registerEvent('scroll', ({ target }) => {
       const { key, ghostElement, ghostTranslateY: oldTranslateY, ghostTranslateX: oldTranslateX } = this.dragData
       const { left: oldScrollLeft, top: oldScrollTop } = oldScroll
-      const { scrollLeft: currentScrollLeft, scrollTop: currentScrollTop } = container
+      const { scrollLeft: currentScrollLeft, scrollTop: currentScrollTop } = target
 
       if (key && ghostElement) {
         const ghostTranslateX = oldTranslateX + currentScrollLeft - oldScrollLeft
@@ -913,8 +898,7 @@ export default class TreeChart {
   }
 
   removeDragEffect() {
-    const { linkContainer } = this
-    const { nodesContainer } = this.elements
+    const { nodesContainer, linkContainer } = this.elements
     const tempLink = linkContainer.querySelector('.is-temp-line')
     tempLink && linkContainer.removeChild(tempLink)
     const collideNode = nodesContainer.querySelector('.collide-node')
@@ -926,7 +910,8 @@ export default class TreeChart {
   }
 
   getCollideType(collideNodeKey, ghostPosition) {
-    const { isVertical, dragData, positionData, elements } = this
+    const { isVertical, dragData, positionData } = this
+    const { rootNode } = this.elements
     const { key: dragNodeKey } = dragData
 
     const { top: collideNodeTop, bottom: collideNodeBottom, left: collideNodeLeft, right: collideNodeRight } = positionData.node[collideNodeKey]
@@ -949,7 +934,7 @@ export default class TreeChart {
     }
 
     // 如果被覆盖的是根节点的话只允许作为子节点插入
-    if (collideNode === elements.rootNode) return allowConfig.child ? 'child' : 'notAllow'
+    if (collideNode === rootNode) return allowConfig.child ? 'child' : 'notAllow'
     // 不可拖到子节点上
     if (dragNode.parentElement.contains(collideNode)) return 'notAllow'
 
@@ -1074,7 +1059,7 @@ export default class TreeChart {
     const { positionData } = this
     const collideNode = this.getNodeElement(collideNodeKey)
     const collideType = this.getCollideType(collideNodeKey, ghostPosition)
-    if (collideType === 'notAllow') return setNotAllowEffect(collideNode)
+    if (collideType === 'notAllow') return collideNode.classList.add('show-not-allow')
     collideNode.classList.add(`become-${collideType}`, 'collide-node')
     const { from, to } = this.getCollideLinePosition(collideType, collideNodeKey)
     this.drawLine(from, to, true)
@@ -1082,14 +1067,21 @@ export default class TreeChart {
     if (collideType === 'child' && (!this.existChildren(collideNodeKey) || this.nodeIsFold(collideNodeKey))) {
       const { top: collideNodeTop, bottom: collideNodeBottom, left: collideNodeLeft, right: collideNodeRight } = positionData.node[collideNodeKey]
       const chartContent = document.createElement('div')
-      chartContent.classList.add('tree-chart-node', 'temp-chart-content')
-      chartContent.style.width = `${collideNodeRight - collideNodeLeft}px`
-      chartContent.style.height = `${collideNodeBottom - collideNodeTop}px`
+      chartContent.classList.add('tree-chart-node')
+      applyStyle(chartContent, {
+        width: `${collideNodeRight - collideNodeLeft}px`,
+        height: `${collideNodeBottom - collideNodeTop}px`
+      })
       const childrenContainer = this.createChildrenContainer('temp-children-container')
       const chartContainer = this.createNodeContainer(true)
       chartContainer.appendChild(chartContent)
       childrenContainer.appendChild(chartContainer)
-      collideNode.parentElement.appendChild(childrenContainer)
+      const collideNodeParent = collideNode.parentElement
+      if (collideNode.nextElementSibling) {
+        collideNodeParent.insertBefore(childrenContainer, collideNode.nextElementSibling)
+      } else {
+        collideNodeParent.appendChild(childrenContainer)
+      }
     }
   }
 
@@ -1171,16 +1163,16 @@ export default class TreeChart {
   }
 
   resize() {
-    const { linkContainer, draggable, isVertical, elements } = this
-    const { rootNode, nodesContainer, ghostContainer } = elements
-    const { style: nodesContainerStyle } = nodesContainer
-    const { style: linkContainerStyle } = linkContainer
+    const { draggable, isVertical } = this
+    const { rootNode, nodesContainer, ghostContainer, linkContainer } = this.elements
 
     // 需要先清除旧的尺寸
-    nodesContainerStyle.height = 'auto'
-    nodesContainerStyle.width = 'auto'
-    nodesContainerStyle.minHeight = 'auto'
-    nodesContainerStyle.minWidth = 'auto'
+    applyStyle(nodesContainer, {
+      height: 'auto',
+      width: 'auto',
+      minHeight: 'auto',
+      minWidth: 'auto'
+    })
 
     const { clientWidth: nodeContainerWidth, clientHeight: nodeContainerHeight } = nodesContainer
     let width = nodeContainerWidth
@@ -1199,14 +1191,20 @@ export default class TreeChart {
     const newWidth = `${width}px`
     const newHeight = `${height}px`
 
-    nodesContainerStyle.minHeight = nodesContainerStyle.minWidth = '100%'
-    nodesContainerStyle.width = linkContainerStyle.width = newWidth
-    nodesContainerStyle.height = linkContainerStyle.height = newHeight
-    if (draggable) {
-      const { style: ghostContainerStyle } = ghostContainer
-      ghostContainerStyle.width = newWidth
-      ghostContainerStyle.height = newHeight
-    }
+    applyStyle(nodesContainer, {
+      height: newHeight,
+      width: newWidth,
+      minHeight: '100%',
+      minWidth: '100%'
+    })
+    applyStyle(linkContainer, {
+      height: newHeight,
+      width: newWidth
+    })
+    draggable && applyStyle(ghostContainer, {
+      height: newHeight,
+      width: newWidth
+    })
   }
 
   setDragScroll() {
