@@ -146,6 +146,11 @@ export default class TreeChart {
       foldButton.classList.add('is-fold')
     }
     this.reloadLink()
+
+    const { foldChange } = this.hooks
+    if (typeof foldChange === 'function') {
+      foldChange(targetKey, this.nodeIsFold(targetKey))
+    }
   }
 
   reRenderNode(targetKey, data) {
@@ -340,7 +345,8 @@ export default class TreeChart {
       'dragEnd',
       'click',
       'mouseEnter',
-      'mouseLeave'
+      'mouseLeave',
+      'foldChange'
     ]
     hookList.forEach(name => {
       const handler = optionHook[name]
@@ -1223,6 +1229,7 @@ export default class TreeChart {
 
     nodesContainer.addEventListener('mousedown', e => {
       if (e.button !== 0 || getEventNode(e.target)) return
+      container.classList.add('drag-scroll-start')
       lock = false
     })
     nodesContainer.addEventListener('mousemove', e => {
@@ -1230,9 +1237,11 @@ export default class TreeChart {
       if (e.button !== 0 || lock) return
       container.scrollLeft = container.scrollLeft - e.movementX
       container.scrollTop = container.scrollTop - e.movementY
+      !container.classList.contains('drag-scroll-move') && container.classList.add('drag-scroll-move')
     })
     this.registerEvent('mouseup', e => {
       if (e.button !== 0) return
+      container.classList.remove('drag-scroll-start', 'drag-scroll-move')
       lock = true
     })
   }
