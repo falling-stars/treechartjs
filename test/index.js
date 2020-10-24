@@ -94,7 +94,7 @@ const chart = new TreeChart({
       console.log('leave')
     },
     foldChange(nodeKey, isFold) {
-      console.log(key, isFold)
+      console.log(nodeKey, isFold)
     }
   }
 })

@@ -1,6 +1,6 @@
 import scss from 'rollup-plugin-scss'
 import postcss from 'rollup-plugin-postcss'
-import babel from 'rollup-plugin-babel'
+import babel from '@rollup/plugin-babel'
 import { terser } from 'rollup-plugin-terser'
 import serve from 'rollup-plugin-serve'
 import livereload from 'rollup-plugin-livereload'
@@ -26,7 +26,7 @@ export default {
       ]
       : [
         postcss({ extract: true }),
-        babel(),
+        babel({ babelHelpers: 'bundled' }),
         terser()
       ]
   )
