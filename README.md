@@ -1,5 +1,5 @@
 # treechartjs
-`treechartjs` can generate tree diagrams based on structured data, and supports node expansion/collapse. Nodes can be edited through API or drag-and-drop behavior. Its size is very small and has no dependencies. The size after construction is only 25KB.
+`treechartjs` can generate tree diagrams based on structured data, and supports node expansion/collapse. Nodes can be edited through API or drag-and-drop behavior. Its size is very small and has no dependencies. The size after construction is only 25KB.[[中文文档](https://github.com/grajs/treechartjs/blob/master/doc/README.zh.md)]
 
 ![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
 
@@ -72,7 +72,7 @@ Among them, `id` and `children` are required, `children` is an `Array` type, `id
 Type: `HTMLElement`
 Default: `undefined`
 
-The parent element of the chart. After initialization, the class name of `tree-chart` will be added. If there are too many nodes, you can set `overflow: auto` to scroll through.
+The parent element of the graph. After initialization, the class name of `tree-chart` will be added. If there are too many nodes, you can set `overflow: auto` to scroll through.
 
 ### contentRender
 Type: `Function`
@@ -462,7 +462,7 @@ chart.reRenderNode('2', nodeData) // key为2的节点被重新渲染
 
 `reloadLink(): void`
 
-Re-render all the connecting lines in the chart
+Re-render all the connecting lines in the graph
 ```javascript
 chart.reloadLink()
 ```
@@ -471,7 +471,7 @@ chart.reloadLink()
 
 `reRender(data: object): void`
 
-Use the new data to render the entire chart, the format of `data` should be consistent with `option.data`
+Use the new data to render the entire graph, the format of `data` should be consistent with `option.data`
 ```javascript
 const data = {
       id: '1',
