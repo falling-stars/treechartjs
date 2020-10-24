@@ -1,6 +1,6 @@
 {
   "name": "treechartjs",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Generate tree chart based on structured data, and support node expansion/collapse, and edit nodes through API or drag-and-drop behavior",
   "main": "dist/index.js",
   "scripts": {
