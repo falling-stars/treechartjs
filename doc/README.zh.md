@@ -34,13 +34,13 @@ const chart = new TreeChart({
 ```
 
 ## 配置项
-#### keyField
+### keyField
 Type: `String`
 Default: `'id'`
 
 用来标识节点的属性，需要保证该属性的唯一性，如果出现了重复的值，将会导致使用过程中出现问题，属性的值必须为`string`类型
 
-#### data
+### data
 Type: `Array`
 Default: `undefined`
 
@@ -68,13 +68,13 @@ Default: `undefined`
     },
 ```
 
-#### container
+### container
 Type: `HTMLElement`
 Default: `undefined`
 
 图形的父元素，初始化之后会被添加`tree-chart`类名，节点过多的情况下可以设置`overflow: auto`来滚动查看
 
-#### contentRender
+### contentRender
 Type: `Function`
 Default: `undefined`
 
@@ -101,7 +101,7 @@ example:
 
 
 
-#### isVertical
+### isVertical
 Type: `Boolean`
 Default: `true`
 
@@ -109,50 +109,50 @@ Default: `true`
 
 ![image](https://i.loli.net/2020/10/23/kV2IuimL1jG8rX7.gif)
 
-#### distanceX
+### distanceX
 Type: `Number`
 Default: `40`
 
 两个节点间的水平间距，这个值不能小于40
 
-#### distanceY
+### distanceY
 Type: `Number`
 Default: `40`
 
 两个节点间的垂直间距，这个值不能小于40
 
-#### allowFold
+### allowFold
 Type: `Boolean`
 Default: `false`
 
 子节点是否能够折叠，如果设置为`true`，可以通过点击或使用API进行展开和折叠
 
-#### foldNodeKeys
+### foldNodeKeys
 Type: `Array`
 Default: `[]`
 
 需要在初始状态时候折叠的节点，如果传入的`key`存在对应的节点，该节点的子节点将会被折叠
 
-#### draggable
+### draggable
 Type: `Boolean`
 Default: `false`
 
 设置为`true`可以开启节点拖拽功能
 
-#### dragScroll
+### dragScroll
 Type: `Boolean`
 Default: `false`
 
 设置为`true`后可以拖拽非节点区域触发界面滚动:
 ![image](https://i.loli.net/2020/10/23/BAYascS3EQZ9CVW.gif)
 
-#### autoScrollTriggerDistance
+### autoScrollTriggerDistance
 Type: `Number`
 Default: `50`
 
-正在拖拽的节点如果靠近边界，并且还有剩余节点没有显示的情况下会触发自动滚动，默认情况下拖拽节点与边界的距离小于`50px`会触发滚动，通过设置`autoScrollTriggerDistance`来改变这个临界值，这个值必须大于`0`
+正在拖拽的节点如果靠近边界，并且还有剩余节点没有显示的情况下会触发自动滚动。默认情况下拖拽节点与边界的距离如果小于`50px`就会触发滚动，可以通过设置`autoScrollTriggerDistance`来改变这个临界值，这个值必须大于`0`
 
-#### line
+### line
 Type: `Object`
 Default: `{ type: 'bezier', smooth: 50 }`
 
@@ -170,13 +170,13 @@ bezier | ![image](https://i.loli.net/2020/10/23/FdHPjwbN7p3fTsQ.png)
 ##### line.smooth
 Type: `Number`
 
-仅在`line.type === bezier`时候生效，取值在`0~100`之间，`line.smooth === 100`时候连接线将会变成直线
+想要启用这个配置需要先设定`line.type === bezier`，`smooth`的取值在`0~100`之间，`line.smooth === 100`时候连接线将会变成直线
 
-#### nodeControl
+### nodeControl
 Type: `Function`
 Default: `undefined`
 
-在`option.draggable === true`的情况下，通过`option.nodeControl`可以控制节点是否能被拖拽和插入子节点或相邻节点
+想要启用这个配置需要先设定`option.draggable === true`，通过`option.nodeControl`可以控制节点是否能被拖拽和插入子节点或相邻节点
 ```javascript
 {
     nodeControl(data) {
@@ -203,11 +203,11 @@ Default: `undefined`
 
 注意：`nodeControl`只能限制鼠标的拖拽行为，但是无法限制`chart.insertNode`方法
 
-#### preventDrag
+### preventDrag
 Type: `Function`
 Default: `undefined`
 
-在`option.draggable === true`的情况下，在节点被拖拽之前会触发`option.preventDrag`，如果返回值为`true`的话会阻止当前节点的拖拽。和`option.nodeControl`不同的是，`option.nodeControl`只会在初始化阶段执行，但是`option.preventDrag`会在每一次拖拽之前执行。
+想要启用这个配置需要先设定`option.draggable === true`，在节点被拖拽之前会触发`option.preventDrag`，如果返回值为`true`的话会阻止当前节点的拖拽。和`option.nodeControl`不同的是，`option.nodeControl`只会在初始化阶段执行，但是`option.preventDrag`会在每一次拖拽之前执行。
 
 使`id === 1`的节点在拖拽前被阻止：
 ```javascript
@@ -217,28 +217,45 @@ Default: `undefined`
     }
 }
 ```
-#### dragStart
+### hook
+Type: `Object`
+Default: `{}`
+
+```javascript
+{
+    hook: {
+        dragStart() {/* something */},
+        dragEnd() {/* something */}
+    }
+}
+```
+
+##### hook.dragStart
 Type: `Function`
 Default: `undefined`
 
 节点的拖拽行为开始时会触发`option.dragStart`方法
 ```javascript
 {
-    dragStart(params) {
-        console.log(data) // { element, key }
+    hook: {
+        dragStart(params) {
+            console.log(data) // { element, key }
+        }
     }
 }
 ```
 
-#### dragEnd
+##### hook.dragEnd
 Type: `Function`
 Default: `undefined`
 
 节点的拖拽行为停止并且产生了位置变化会触发`option.dragEnd`方法
 ```javascript
 {
-    dragEnd(params) {
-        console.log(params) // { key, target, type, from, to }
+    hook: {
+        dragEnd(params) {
+            console.log(params) // { key, target, type, from, to }
+        }
     }
 }
 ```
@@ -250,41 +267,62 @@ Default: `undefined`
 
 `params.from`和`params.to`代表了节点移动前和移动后的位置信息
 
-#### click
+##### hook.click
 Type: `Function`
 Default: `undefined`
 
 节点被点击时会触发`option.click`方法
 ```javascript
 {
-    click(params, event) {
-        console.log(params, event) // ({ element, key }, event)
+    hook: {
+        click(params, event) {
+            console.log(params, event) // ({ element, key }, event)
+        }
     }
 }
 ```
 
-#### mouseEnter
+##### hook.mouseEnter
 Type: `Function`
 Default: `undefined`
 
 鼠标进入节点区域时会触发`option.mouseEnter`方法
 ```javascript
 {
-    mouseEnter(params, event) {
-        console.log(params, event) // ({ element, key }, event)
+    hook: {
+        mouseEnter(params, event) {
+            console.log(params, event) // ({ element, key }, event)
+        }
     }
 }
 ```
 
-#### mouseLeave
+##### hook.mouseLeave
 Type: `Function`
 Default: `undefined`
 
 鼠标离开节点区域时会触发`option.mouseLeave`方法
 ```javascript
 {
-    mouseLeave(params, event) {
-        console.log(params, event) // ({ element, key }, event)
+    hook: {
+        mouseLeave(params, event) {
+            console.log(params, event) // ({ element, key }, event)
+        }
+    }
+}
+```
+
+##### hook.foldChange
+Type: `Function`
+Default: `undefined`
+
+节点折叠状态变化的时候会触发`option.foldChange`
+```javascript
+{
+    hook: {
+        foldChange(nodeKey, isFold) {
+            console.log(nodeKey, isFold) // ('2', true)
+        }
     }
 }
 ```
