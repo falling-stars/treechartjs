@@ -3,6 +3,8 @@
 
 ![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
 
+开源不易，如果帮助到您了，请顺手给个`start`吧
+
 ## 安装
 ```sh
 npm install treechartjs
