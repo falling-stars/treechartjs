@@ -3,6 +3,8 @@
 
 ![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
 
+If `treechartjs` can help you, give me [Star](https://github.com/grajs/treechartjs) will let me invest more time in open source, thank you very much
+
 ## Installation
 ```sh
 npm install treechartjs
@@ -437,11 +439,22 @@ chart.nodeIsFold('2') // false
 
 #### toggleFold
 
-`toggleFold(nodeKey: string): void`
+`toggleFold(nodeKey: string, option?: { fold: boolean, reloadLink: boolean }): void`
 
-The node corresponding to `nodeKey` will change the collapsed state
+The node corresponding to `nodeKey` will change the collapsed state:
 ```javascript
 chart.toggleFold('2')
+```
+You can set ʻoption.fold` to specify the folding state:
+```javascript
+chart.toggleFold('2', { fold: true }) // Collapse the node whose nodeKey is 2
+```
+If a large number of nodes need to change the folding state, you can set ʻoption.reloadLink = false` and manually execute `chart.reloadLink()` to improve performance:
+```javascript
+['1', '2', '3', '4', '5', '6'].forEach(nodeKey => {
+    chart.toggleFold(nodeKey, { reloadLink: false })
+})
+chart.reloadLink()
 ```
 
 #### reRenderNode

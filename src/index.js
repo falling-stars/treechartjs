@@ -134,12 +134,16 @@ export default class TreeChart {
     return this.getFoldButton(targetKey).classList.contains('is-fold')
   }
 
-  toggleFold(targetKey, isFold, reloadLink = true) {
+  toggleFold(targetKey, option) {
     const foldButton = this.getFoldButton(targetKey)
     if (!foldButton) return
+    const { fold, reloadLink } = Object.assign({
+      fold: undefined,
+      reloadLink: true
+    }, option)
     const childNodeContainer = this.getChildrenContainer(targetKey)
     const nodeIsFold = this.nodeIsFold(targetKey)
-    if (nodeIsFold === isFold) return
+    if (typeof fold === 'boolean' && nodeIsFold === fold) return
     if (nodeIsFold) {
       childNodeContainer.classList.remove('is-hidden')
       foldButton.classList.remove('is-fold')

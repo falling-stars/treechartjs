@@ -3,7 +3,7 @@
 
 ![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
 
-开源不易，如果帮助到您了，请顺手给个`start`吧
+如果`treechartjs`能帮助到你，给我[Star](https://github.com/grajs/treechartjs)将会让我投入更多时间在开源方面，非常感谢
 
 ## 安装
 ```sh
@@ -439,11 +439,22 @@ chart.nodeIsFold('2') // false
 
 #### toggleFold
 
-`toggleFold(nodeKey: string): void`
+`toggleFold(nodeKey: string, option?: { fold: boolean, reloadLink: boolean }): void`
 
-`nodeKey`对应的节点会改变折叠状态
+`nodeKey`对应的节点会改变折叠状态：
 ```javascript
 chart.toggleFold('2')
+```
+可以设置`option.fold`指定折叠状态：
+```javascript
+chart.toggleFold('2', { fold: true }) // 折叠nodeKey为2的节点
+```
+如果大量节点需要改变折叠状态，可以设置`option.reloadLink = false`和手动执行`chart.reloadLink()`提高性能：
+```javascript
+['1', '2', '3', '4', '5', '6'].forEach(nodeKey => {
+    chart.toggleFold(nodeKey, { reloadLink: false })
+})
+chart.reloadLink()
 ```
 
 #### reRenderNode
