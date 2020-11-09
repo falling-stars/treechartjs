@@ -1,9 +1,12 @@
 # treechartjs
-`treechartjs` can generate tree diagrams based on structured data, and supports node expansion/collapse. Nodes can be edited through API or drag-and-drop behavior. Its size is very small and has no dependencies. The size after construction is only 25KB.[[中文文档](https://github.com/grajs/treechartjs/blob/master/doc/README.zh.md)]
+[[中文文档](https://github.com/grajs/treechartjs/blob/master/doc/README.zh.md)]
 
-![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
-
-If `treechartjs` can help you, give me [Star](https://github.com/grajs/treechartjs) will let me invest more time in open source, thank you very much
+## Features
+- Lightweight graphics library, without any dependencies, the size after construction is only 32KB
+- Support node expand/collapse
+- You can drag and drop nodes to edit
+- Support drag and drop to move layers
+- Support multiple solutions to limit the operation of the node and prompt
 
 ## Installation
 ```sh

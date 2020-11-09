@@ -1,9 +1,13 @@
 # treechartjs
-`treechartjs`可以根据结构化数据生成树形图，并且支持节点展开/收起，通过API或拖拽行为对节点进行编辑，他的体积非常小没有任何依赖，构建后的大小仅为25KB。
 
 ![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
 
-如果`treechartjs`能帮助到你，给我[Star](https://github.com/grajs/treechartjs)将会让我投入更多时间在开源方面，非常感谢
+## 特征
+- 轻量的图形库，没有任何依赖，构建后的大小仅为32KB
+- 支持节点展开/收起
+- 可以拖拽节点进行编辑
+- 支持拖拽移动图层
+- 支持多种方案限制节点的操作并提示
 
 ## 安装
 ```sh
