@@ -1,4 +1,5 @@
 # treechartjs
+![image](https://i.loli.net/2020/10/23/t73zrISF9aBTXe1.gif)
 [[中文文档](https://github.com/grajs/treechartjs/blob/master/doc/README.zh.md)]
 
 ## Features
