@@ -1,5 +1,4 @@
 import scss from 'rollup-plugin-scss'
-import postcss from 'rollup-plugin-postcss'
 import babel from '@rollup/plugin-babel'
 import { terser } from 'rollup-plugin-terser'
 import serve from 'rollup-plugin-serve'
@@ -11,8 +10,7 @@ export default {
   input: isDev ? 'test/index.js' : 'src/index.js',
   output: {
     file: 'dist/index.js',
-    format: isDev ? 'iife' : 'esm',
-    exports: isDev ? 'auto' : 'default'
+    format: isDev ? 'iife' : 'esm'
   },
   plugins: [scss()].concat(
     isDev
@@ -25,7 +23,6 @@ export default {
         livereload({ watch: ['dist', 'test'] })
       ]
       : [
-        postcss({ extract: true }),
         babel({ babelHelpers: 'bundled' }),
         terser()
       ]

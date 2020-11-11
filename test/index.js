@@ -100,7 +100,14 @@ const chart = new TreeChart({
 })
 console.log(chart)
 document.querySelector('.re-render').addEventListener('click', () => {
-  chart.reRender(data)
+  chart.reRender({
+    name: 're-render',
+    id: 1,
+    children: [
+      { name: 11, id: 11 },
+      { name: 13, id: 13 }
+    ]
+  })
 })
 document.querySelector('.re-render-node').addEventListener('click', () => {
   chart.reRenderNode('122', { name: 999, id: 999 })

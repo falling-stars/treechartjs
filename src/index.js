@@ -201,6 +201,7 @@ export default class TreeChart {
   }
 
   reRender(data) {
+    if (!this.dataValidate(data)) return
     const { nodesContainer } = this.elements
     // 更新nodes
     this.elements.rootNode = null
@@ -271,7 +272,14 @@ export default class TreeChart {
   }
 
   getKeyField(data) {
-    return data[this.option.keyField].toString() || null
+    const keyValue = data[this.option.keyField]
+    if (!/string|number/.test(typeof keyValue)) return null
+    return keyValue.toString()
+  }
+
+  dataValidate(data) {
+    if (!data) return false
+    return !!this.getKeyField(data)
   }
 
   constructor(option) {
@@ -366,7 +374,9 @@ export default class TreeChart {
     container.classList.add('tree-chart')
     isVertical && container.classList.add('is-vertical')
     this.elements.container = container
-    this.createNodes(data, this.createNodesContainer())
+    const nodesContainer = this.createNodesContainer()
+    this.elements.nodesContainer = nodesContainer
+    this.dataValidate(data) && this.createNodes(data, nodesContainer)
     this.createLinkContainer()
     this.createLink()
     this.createGhostContainer()
@@ -1177,6 +1187,7 @@ export default class TreeChart {
   resize() {
     const { draggable, isVertical } = this
     const { rootNode, nodesContainer, ghostContainer, linkContainer } = this.elements
+    if (!rootNode) return
 
     // 需要先清除旧的尺寸
     applyStyle(nodesContainer, {
