@@ -53,6 +53,7 @@ export default class TreeChart {
   }
 
   insertNode(targetKey, origin, type) {
+    const { allowFold } = this.option
     const targetNode = this.getNodeElement(targetKey)
     // 限制不能给根节点添加兄弟元素
     if (/next|previous/.test(type) && targetNode === this.elements.rootNode) return
@@ -79,7 +80,7 @@ export default class TreeChart {
       // 如果移动节点后原位置没有兄弟节点的话移除childrenContainer容器和展开收起按钮
       if (!this.existChildren(originParentKey)) {
         this.removeChildrenContainer(originParentKey)
-        this.allowFold && this.removeFoldButton(originParentKey)
+        allowFold && this.removeFoldButton(originParentKey)
       }
     }
 
@@ -112,6 +113,7 @@ export default class TreeChart {
   }
 
   removeNode(targetKey) {
+    const { allowFold } = this.option
     const targetNode = this.getNodeElement(targetKey)
     if (!targetNode) return
     // 不支持移除root节点
@@ -125,7 +127,7 @@ export default class TreeChart {
     // 如果当前节点是唯一的子节点就移除父节点的子容器
     if (!this.existChildren(parentNodeKey)) {
       this.removeChildrenContainer(parentNodeKey)
-      this.allowFold && this.removeFoldButton(parentNodeKey)
+      allowFold && this.removeFoldButton(parentNodeKey)
     }
     this.reloadLink()
   }
@@ -308,23 +310,9 @@ export default class TreeChart {
       hook: {},
       ...inputOption
     }
-    const {
-      draggable,
-      allowFold,
-      dragScroll,
-      isVertical,
-      line,
-      padding,
-      distanceX,
-      distanceY
-    } = option
+    const { padding, distanceX, distanceY } = option
     if (distanceX < 40) option.distanceX = 40
     if (distanceY < 40) option.distanceY = 40
-    this.draggable = draggable
-    this.allowFold = allowFold
-    this.dragScroll = dragScroll
-    this.isVertical = isVertical
-    this.lineConfig = line
     // draggable时候最小内边距不能小于30
     const containerPadding = {
       top: 30,
@@ -336,7 +324,7 @@ export default class TreeChart {
     for (const key in containerPadding) {
       let paddingValue = containerPadding[key]
       if (!isNumber(paddingValue)) paddingValue = 0
-      if (draggable && paddingValue < 30) paddingValue = 30
+      if (option.draggable && paddingValue < 30) paddingValue = 30
       containerPadding[key] = paddingValue
     }
     this.containerPadding = containerPadding
@@ -369,8 +357,7 @@ export default class TreeChart {
   }
 
   createChartElement() {
-    const { isVertical } = this
-    const { container, data } = this.option
+    const { isVertical, container, data } = this.option
     container.classList.add('tree-chart')
     isVertical && container.classList.add('is-vertical')
     this.elements.container = container
@@ -406,9 +393,9 @@ export default class TreeChart {
 
   // 数据数据结构生成节点
   createNodes(data, parentNodeContainer) {
-    const { allowFold, option, elements } = this
+    const { elements } = this
     const { children } = data
-    const { foldNodeKeys } = option
+    const { allowFold, foldNodeKeys } = this.option
     const existChildren = Array.isArray(children) && children.length > 0
 
     // 创建节点
@@ -441,8 +428,7 @@ export default class TreeChart {
   }
 
   createNode(data) {
-    const { draggable, option } = this
-    const { distanceX, distanceY, contentRender, nodeControl } = option
+    const { draggable, distanceX, distanceY, contentRender, nodeControl } = this.option
 
     const node = document.createElement('div')
     const key = this.getKeyField(data)
@@ -529,7 +515,7 @@ export default class TreeChart {
 
   // 根据节点间父子关系生成连线信息，同时生成节点位置数据
   createLink() {
-    const { draggable, isVertical } = this
+    const { draggable, isVertical } = this.option
     const { container, nodesContainer, linkContainer } = this.elements
     const { left: containerLeft, top: containerTop } = container.getBoundingClientRect()
     const { scrollLeft, scrollTop } = container
@@ -635,7 +621,7 @@ export default class TreeChart {
   }
 
   setEvent() {
-    const { allowFold, draggable, dragScroll } = this
+    const { draggable, allowFold, dragScroll } = this.option
     allowFold && this.setFoldEvent()
     this.setClickHook()
     draggable && this.setDragEvent()
@@ -651,9 +637,9 @@ export default class TreeChart {
 
   // 两点间连线
   drawLine(from, to, isTemp) {
-    const { isVertical, allowFold } = this
+    const { isVertical, allowFold, line } = this.option
     const { linkContainer } = this.elements
-    const { type: lineType, smooth } = this.lineConfig
+    const { type: lineType, smooth } = line
 
     const lineClassName = `line-${from.key}-${to.key}`
     let link = document.querySelector(`.${lineClassName}`)
@@ -717,7 +703,8 @@ export default class TreeChart {
 
   // 判断是否处于拖动过程
   isDragging() {
-    const { draggable, dragData } = this
+    const { dragData } = this
+    const { draggable } = this.option
     if (!draggable) return false
     const { ghostTranslateX, ghostTranslateY, key } = dragData
     return key && (ghostTranslateX !== 0 || ghostTranslateY !== 0)
@@ -932,7 +919,8 @@ export default class TreeChart {
   }
 
   getCollideType(collideNodeKey, ghostPosition) {
-    const { isVertical, dragData, positionData } = this
+    const { dragData, positionData } = this
+    const { isVertical } = this.option
     const { rootNode } = this.elements
     const { key: dragNodeKey } = dragData
 
@@ -990,8 +978,8 @@ export default class TreeChart {
   }
 
   getCollideLinePosition(collideType, collideNodeKey) {
-    const { isVertical, positionData, option } = this
-    const { distanceX, distanceY } = option
+    const { positionData } = this
+    const { isVertical, distanceX, distanceY } = this.option
     const linPositionData = {}
     const { top: collideNodeTop, bottom: collideNodeBottom, left: collideNodeLeft, right: collideNodeRight } = positionData.node[collideNodeKey]
     if (isVertical) {
@@ -1185,7 +1173,7 @@ export default class TreeChart {
   }
 
   resize() {
-    const { draggable, isVertical } = this
+    const { draggable, isVertical } = this.option
     const { rootNode, nodesContainer, ghostContainer, linkContainer } = this.elements
     if (!rootNode) return
 
