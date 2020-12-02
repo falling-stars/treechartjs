@@ -1,3 +1,5 @@
+import resolve from '@rollup/plugin-node-resolve'
+import commonjs from '@rollup/plugin-commonjs'
 import postcss from 'rollup-plugin-postcss'
 import babel from '@rollup/plugin-babel'
 import { terser } from 'rollup-plugin-terser'
@@ -12,7 +14,12 @@ export default {
     dir: 'dist',
     format: isDev ? 'iife' : 'esm'
   },
-  plugins: [postcss()].concat(
+  external: [/@babel\/runtime/],
+  plugins: [
+    resolve(),
+    commonjs(),
+    postcss()
+  ].concat(
     isDev
       ? [
         serve({
@@ -23,7 +30,7 @@ export default {
         livereload({ watch: ['dist', 'test'] })
       ]
       : [
-        babel({ babelHelpers: 'bundled' }),
+        babel({ babelHelpers: 'runtime', plugins: ['@babel/plugin-transform-runtime'] }),
         terser()
       ]
   )
