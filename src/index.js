@@ -535,7 +535,7 @@ export default class TreeChart {
           const { offsetWidth: childElementWidth, offsetHeight: childElementHeight } = childElement
           const to = {
             x: childElementLeft - containerLeft + scrollLeft + (isVertical ? childElementWidth / 2 : 0),
-            y: childElementTop - containerTop + scrollTop + (isVertical ? 0 : childElement.offsetHeight / 2),
+            y: childElementTop - containerTop + scrollTop + (isVertical ? 0 : childElementHeight / 2),
             key: childNodeKey
           }
           this.drawLine(from, to)
