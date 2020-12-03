@@ -24,7 +24,7 @@ module.exports = {
     'no-new': 0,
     'space-before-function-paren': 0,
     'eol-last': 0,
-    'no-unused-vars': 0,
+    'no-unused-vars': ['error', { vars: 'all', args: 'after-used', ignoreRestSiblings: false }],
     'no-undef': 0,
     'prefer-promise-reject-errors': 0,
     'no-unneeded-ternary': 0,

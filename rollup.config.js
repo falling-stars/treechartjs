@@ -1,5 +1,6 @@
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
+import eslint from '@rollup/plugin-eslint'
 import postcss from 'rollup-plugin-postcss'
 import babel from '@rollup/plugin-babel'
 import { terser } from 'rollup-plugin-terser'
@@ -18,6 +19,7 @@ export default {
   plugins: [
     resolve(),
     commonjs(),
+    eslint(),
     postcss()
   ].concat(
     isDev
