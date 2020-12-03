@@ -19,7 +19,9 @@ export default {
   plugins: [
     resolve(),
     commonjs(),
-    eslint(),
+    eslint({
+      exclude: ['node_modules/**', '**/*.scss']
+    }),
     postcss()
   ].concat(
     isDev
