@@ -353,40 +353,40 @@ Get the `nodeKey` corresponding to the `nodeElement` node
 chart.getKeyByElement(document.querySelector('.tree-chart-item-1')) // nodeKey: 1
 ```
 
-#### getPreviousKey
+#### getPreviousSibling
 
-`getPreviousKey(nodeKey: string): string`
+`getPreviousSibling(nodeKey: string): string`
 
 Get the `nodeKey` of the previous sibling node according to the passed `nodeKey`
 ```javascript
 chart.getKeyByElement('3') // nodeKey: 2
 ```
 
-#### getNextKey
+#### getNextSibling
 
-`getNextKey(nodeKey: string): string`
+`getNextSibling(nodeKey: string): string`
 
 Obtain the `nodeKey` of the next sibling node according to the passed `nodeKey`
 ```javascript
-chart.getNextKey('2') // nodeKey: 3
+chart.getNextSibling('2') // nodeKey: 3
 ```
 
-#### getParentKey
+#### getParent
 
-`getParentKey(nodeKey: string): string`
+`getParent(nodeKey: string): string`
 
 Get the `nodeKey` of the parent node according to the passed `nodeKey`
 ```javascript
-chart.getNextKey('2') // nodeKey: 1
+chart.getNextSibling('2') // nodeKey: 1
 ```
 
-#### getChildrenKeys
+#### getChildren
 
-`getChildrenKeys(nodeKey: string): Array<string>`
+`getChildren(nodeKey: string): Array<string>`
 
 Get the `nodeKey` list of the child nodes according to the passed `nodeKey`. Note that only the `nodeKey` of the first-level child nodes are returned here.
 ```javascript
-chart.getChildrenKeys('1') // nodeKeys: ['1', '2']
+chart.getChildren('1') // nodeKeys: ['1', '2']
 ```
 
 #### existChildren
@@ -423,13 +423,13 @@ chart.insertNode('1', newNodeData, 'child') // Create a new child node for the n
 ```
 >Note: Under no circumstances can you insert a sibling node to the root node
 
-#### removeNode
+#### remove
 
-`removeNode(nodeKey: string): void`
+`remove(nodeKey: string): void`
 
 Delete the node corresponding to `nodeKey`
 ```javascript
-chart.removeNode('3') // key为3的节点被删除
+chart.remove('3') // key为3的节点被删除
 ```
 
 #### nodeIsFold

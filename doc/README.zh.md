@@ -353,40 +353,40 @@ chart.getNodeElement('1') // HTMLElement
 chart.getKeyByElement(document.querySelector('.tree-chart-item-1')) // nodeKey: 1
 ```
 
-#### getPreviousKey
+#### getPreviousSibling
 
-`getPreviousKey(nodeKey: string): string`
+`getPreviousSibling(nodeKey: string): string`
 
 根据传入的`nodeKey`获取前一个兄弟节点的`nodeKey`
 ```javascript
 chart.getKeyByElement('3') // nodeKey: 2
 ```
 
-#### getNextKey
+#### getNextSibling
 
-`getNextKey(nodeKey: string): string`
+`getNextSibling(nodeKey: string): string`
 
 根据传入的`nodeKey`获取后一个兄弟节点的`nodeKey`
 ```javascript
-chart.getNextKey('2') // nodeKey: 3
+chart.getNextSibling('2') // nodeKey: 3
 ```
 
-#### getParentKey
+#### getParent
 
-`getParentKey(nodeKey: string): string`
+`getParent(nodeKey: string): string`
 
 根据传入的`nodeKey`获取父节点的`nodeKey`
 ```javascript
-chart.getNextKey('2') // nodeKey: 1
+chart.getNextSibling('2') // nodeKey: 1
 ```
 
-#### getChildrenKeys
+#### getChildren
 
-`getChildrenKeys(nodeKey: string): Array<string>`
+`getChildren(nodeKey: string): Array<string>`
 
 根据传入的`nodeKey`获取子节点的`nodeKey`列表，需要注意这里只返回一级子节点的`nodeKey`
 ```javascript
-chart.getChildrenKeys('1') // nodeKeys: ['1', '2']
+chart.getChildren('1') // nodeKeys: ['1', '2']
 ```
 
 #### existChildren
@@ -423,13 +423,13 @@ chart.insertNode('1', newNodeData, 'child') // 为key为1的节点创建一个�
 ```
 >注意：任何情况下都无法对根节点插入兄弟节点
 
-#### removeNode
+#### remove
 
-`removeNode(nodeKey: string): void`
+`remove(nodeKey: string): void`
 
 删除`nodeKey`对应的节点
 ```javascript
-chart.removeNode('3') // key为3的节点被删除
+chart.remove('3') // key为3的节点被删除
 ```
 
 #### nodeIsFold

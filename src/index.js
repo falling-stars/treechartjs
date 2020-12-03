@@ -13,35 +13,35 @@ export default class TreeChart {
     return this.elements.nodesContainer.querySelector(`.tree-chart-item-${key}`)
   }
 
-  getPreviousKey(key) {
+  getPreviousSibling(id) {
     try {
-      const nodeElement = this.getNodeElement(key)
+      const nodeElement = this.getNodeElement(id)
       return this.getKeyByElement(nodeElement.parentElement.previousElementSibling.querySelector('.tree-chart-node'))
     } catch (e) {
       return null
     }
   }
 
-  getNextKey(key) {
+  getNextSibling(id) {
     try {
-      const nodeElement = this.getNodeElement(key)
+      const nodeElement = this.getNodeElement(id)
       return this.getKeyByElement(nodeElement.parentElement.nextElementSibling.querySelector('.tree-chart-node'))
     } catch (e) {
       return null
     }
   }
 
-  getParentKey(key) {
+  getParent(id) {
     try {
-      const nodeElement = this.getNodeElement(key)
+      const nodeElement = this.getNodeElement(id)
       return this.getKeyByElement(nodeElement.parentElement.parentElement.previousElementSibling)
     } catch (e) {
       return null
     }
   }
 
-  getChildrenKeys(key) {
-    const childrenKeys = this.getNodeElement(key).getAttribute('data-children')
+  getChildren(id) {
+    const childrenKeys = this.getNodeElement(id).getAttribute('data-children')
     if (!childrenKeys) return []
     return childrenKeys.split(',')
   }
@@ -65,7 +65,7 @@ export default class TreeChart {
     let originNode = null
     let originNodeContainer = null
     if (needCreateNode) {
-      originKey = this.getKeyField(origin)
+      originKey = origin.id
       originNode = this.createNode(origin)
       originNodeContainer = this.createNodeContainer()
       originNodeContainer.appendChild(originNode)
@@ -75,7 +75,7 @@ export default class TreeChart {
       originNode = this.getNodeElement(originKey)
       originNodeContainer = originNode.parentElement
       // 修改原先节点父节点的data-children属性
-      const originParentKey = this.getParentKey(originKey)
+      const originParentKey = this.getParent(originKey)
       this.removeChildrenKey(originParentKey, originKey)
       // 如果移动节点后原位置没有兄弟节点的话移除childrenContainer容器和展开收起按钮
       if (!this.existChildren(originParentKey)) {
@@ -101,7 +101,7 @@ export default class TreeChart {
       }
       this.addChildrenKey(targetKey, originKey)
     } else {
-      const targetParentKey = this.getParentKey(targetKey)
+      const targetParentKey = this.getParent(targetKey)
       const parentChildrenContainer = this.getChildrenContainer(targetParentKey)
       const targetNodeContainer = targetNode.parentElement
       if (type === 'previous') parentChildrenContainer.insertBefore(originNodeContainer, targetNodeContainer)
@@ -112,15 +112,15 @@ export default class TreeChart {
     this.reloadLink()
   }
 
-  removeNode(targetKey) {
+  remove(id) {
     const { allowFold } = this.option
-    const targetNode = this.getNodeElement(targetKey)
+    const targetNode = this.getNodeElement(id)
     if (!targetNode) return
     // 不支持移除root节点
     if (targetNode === this.elements.rootNode) return console.warn('not allow remove root node')
     // 修改父节点的data-children
-    const parentNodeKey = this.getParentKey(targetKey)
-    this.removeChildrenKey(parentNodeKey, targetKey)
+    const parentNodeKey = this.getParent(id)
+    this.removeChildrenKey(parentNodeKey, id)
     // 移除当前节点
     const targetNodeContainer = targetNode.parentElement
     targetNodeContainer.parentElement.removeChild(targetNodeContainer)
@@ -163,14 +163,14 @@ export default class TreeChart {
 
   reRenderNode(targetKey, data) {
     const oldNodeKey = targetKey.toString()
-    const newNodeKey = this.getKeyField(data)
+    const newNodeKey = data.id
     const node = this.getNodeElement(oldNodeKey)
-    const childrenKeys = this.getChildrenKeys(targetKey)
+    const childrenKeys = this.getChildren(targetKey)
 
     // 更新key
     if (newNodeKey !== oldNodeKey) {
       const { linkContainer } = this.elements
-      const parentNodeKey = this.getParentKey(oldNodeKey)
+      const parentNodeKey = this.getParent(oldNodeKey)
       // 替换父节点的children-key
       this.replaceChildrenKey(parentNodeKey, oldNodeKey, newNodeKey)
       // 替换line的类名
@@ -236,7 +236,7 @@ export default class TreeChart {
   }
 
   removeChildrenKey(targetKey, removeKey) {
-    const childrenKeys = this.getChildrenKeys(targetKey)
+    const childrenKeys = this.getChildren(targetKey)
     if (!childrenKeys.length) return
     const index = childrenKeys.indexOf(removeKey)
     index > -1 && childrenKeys.splice(index, 1)
@@ -249,7 +249,7 @@ export default class TreeChart {
   }
 
   replaceChildrenKey(targetKey, oldKey, newKey) {
-    const childrenKeys = this.getChildrenKeys(targetKey)
+    const childrenKeys = this.getChildren(targetKey)
     if (!childrenKeys.length) return
     const index = childrenKeys.indexOf(oldKey)
     if (index === -1) return
@@ -273,15 +273,9 @@ export default class TreeChart {
     container.parentElement.removeChild(container)
   }
 
-  getKeyField(data) {
-    const keyValue = data[this.option.keyField]
-    if (!/string|number/.test(typeof keyValue)) return null
-    return keyValue.toString()
-  }
-
   dataValidate(data) {
     if (!data) return false
-    return !!this.getKeyField(data)
+    return !!data.id
   }
 
   constructor(option) {
@@ -410,7 +404,7 @@ export default class TreeChart {
       if (allowFold) {
         const foldButton = this.createFoldButton(node)
         // 节点需要初始折叠
-        if (foldNodeKeys.includes(this.getKeyField(data))) {
+        if (foldNodeKeys.includes(data.id)) {
           foldButton.classList.add('is-fold')
           childrenContainer.classList.add('is-hidden')
         }
@@ -418,7 +412,7 @@ export default class TreeChart {
 
       const childKeys = []
       children.forEach(childData => {
-        childKeys.push(this.getKeyField(childData))
+        childKeys.push(childData.id)
         const childNodeContainer = this.createNodeContainer()
         childrenContainer.appendChild(childNodeContainer)
         this.createNodes(childData, childNodeContainer)
@@ -431,7 +425,7 @@ export default class TreeChart {
     const { draggable, distanceX, distanceY, contentRender, nodeControl } = this.option
 
     const node = document.createElement('div')
-    const key = this.getKeyField(data)
+    const key = data.id
     node.classList.add('tree-chart-node', `tree-chart-item-${key}`)
     node.setAttribute('data-key', key)
     applyStyle(node, {
@@ -749,9 +743,9 @@ export default class TreeChart {
   createNodeParams(nodeKey) {
     return {
       key: nodeKey,
-      parentKey: this.getParentKey(nodeKey),
-      previousKey: this.getPreviousKey(nodeKey),
-      nextKey: this.getNextKey(nodeKey)
+      parentKey: this.getParent(nodeKey),
+      previousKey: this.getPreviousSibling(nodeKey),
+      nextKey: this.getNextSibling(nodeKey)
     }
   }
 
@@ -931,11 +925,11 @@ export default class TreeChart {
     const collideNode = this.getNodeElement(collideNodeKey)
 
     // 拖到父节点时只能作为兄弟节点插入
-    const coverIsParent = collideNodeKey === this.getParentKey(dragNodeKey)
+    const coverIsParent = collideNodeKey === this.getParent(dragNodeKey)
     // 禁止插入到上一个兄弟节点的下面
-    const coverIsPrevious = collideNodeKey === this.getPreviousKey(dragNodeKey)
+    const coverIsPrevious = collideNodeKey === this.getPreviousSibling(dragNodeKey)
     // 禁止插入到下一个兄弟节点的上面
-    const coverIsNext = collideNodeKey === this.getNextKey(dragNodeKey)
+    const coverIsNext = collideNodeKey === this.getNextSibling(dragNodeKey)
     // 权限数据
     const allowConfig = {
       child: !collideNode.classList.contains('not-allow-insert-child') && !coverIsParent,
@@ -992,7 +986,7 @@ export default class TreeChart {
         }
         // 有子节点并且子节点展开
         if (this.existChildren(collideNodeKey) && !this.nodeIsFold(collideNodeKey)) {
-          const lastChildrenNodeKey = this.getChildrenKeys(collideNodeKey).pop()
+          const lastChildrenNodeKey = this.getChildren(collideNodeKey).pop()
           const { right: lastChildrenNodeRight, top: lastChildrenNodeTop } = positionData.node[lastChildrenNodeKey]
           linPositionData.to = {
             x: lastChildrenNodeRight + 20,
@@ -1009,7 +1003,7 @@ export default class TreeChart {
         }
         return linPositionData
       }
-      const parentNodeKey = this.getParentKey(collideNodeKey)
+      const parentNodeKey = this.getParent(collideNodeKey)
       const parentPosition = positionData.node[parentNodeKey]
       linPositionData.from = {
         x: (parentPosition.left + parentPosition.right) / 2,
@@ -1032,7 +1026,7 @@ export default class TreeChart {
       }
       // 有子节点并且子节点展开
       if (this.existChildren(collideNodeKey) && !this.nodeIsFold(collideNodeKey)) {
-        const lastChildrenNodeKey = this.getChildrenKeys(collideNodeKey).pop()
+        const lastChildrenNodeKey = this.getChildren(collideNodeKey).pop()
         const { left: lastChildrenNodeLeft, bottom: lastChildrenNodeBottom } = positionData.node[lastChildrenNodeKey]
         linPositionData.to = {
           x: lastChildrenNodeLeft,
@@ -1049,7 +1043,7 @@ export default class TreeChart {
       }
       return linPositionData
     }
-    const parentNodeKey = this.getParentKey(collideNodeKey)
+    const parentNodeKey = this.getParent(collideNodeKey)
     const parentPosition = positionData.node[parentNodeKey]
     linPositionData.from = {
       x: parentPosition.right,

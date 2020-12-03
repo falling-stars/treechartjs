@@ -113,7 +113,7 @@ document.querySelector('.re-render-node').addEventListener('click', () => {
   chart.reRenderNode('122', { name: 999, id: 999 })
 })
 document.querySelector('.remove-node').addEventListener('click', () => {
-  chart.removeNode('11')
+  chart.remove('11')
 })
 document.querySelector('.move-node').addEventListener('click', () => {
   chart.insertNode('12', '111', 'child')
