@@ -5,9 +5,9 @@ export default class Store {
   constructor(sourceData: SourceDataItem[]) {
     this.formatData(sourceData)
   }
-  formatData(sourceData: SourceDataItem[]): DataItem {
+  formatData(sourceData: SourceDataItem[]): DataItem | null {
     const { dataMap } = this
-    let root = null
+    let root: SourceDataItem | null = null
     sourceData.forEach(item => {
       const { id, parent } = item
       if (dataMap[id]) {

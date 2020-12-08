@@ -1,19 +1,19 @@
 module.exports = {
   env: {
     browser: true,
-    es6: true
+    es2021: true
   },
   extends: [
     'standard'
   ],
-  globals: {
-    Atomics: 'readonly',
-    SharedArrayBuffer: 'readonly'
-  },
+  parser: '@typescript-eslint/parser',
   parserOptions: {
-    ecmaVersion: 2018,
+    ecmaVersion: 12,
     sourceType: 'module'
   },
+  plugins: [
+    '@typescript-eslint'
+  ],
   rules: {
     indent: ['error', 2],
     'arrow-parens': 0,
@@ -32,6 +32,7 @@ module.exports = {
     'object-curly-spacing': 0,
     'no-prototype-builtins': 0,
     'template-curly-spacing': 0,
-    'no-void': 0
+    'no-void': 0,
+    'lines-between-class-members': 0
   }
 }
