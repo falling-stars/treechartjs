@@ -58,5 +58,10 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.12.5"
-  }
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not ie <= 8"
+  ]
 }
