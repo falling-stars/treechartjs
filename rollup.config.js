@@ -1,7 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import eslint from '@rollup/plugin-eslint'
-import typescript from '@rollup/plugin-typescript'
+import typescript from 'rollup-plugin-typescript2'
 import postcss from 'rollup-plugin-postcss'
 import babel from '@rollup/plugin-babel'
 import { terser } from 'rollup-plugin-terser'
@@ -11,7 +11,7 @@ import livereload from 'rollup-plugin-livereload'
 const isDev = process.env.NODE_ENV === 'development'
 
 export default {
-  input: isDev ? 'dev/index.js' : 'src/store.ts',
+  input: isDev ? 'dev/index.js' : 'src/index.js',
   output: {
     dir: 'dist',
     format: isDev ? 'iife' : 'esm'
