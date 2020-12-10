@@ -4,6 +4,7 @@ import eslint from '@rollup/plugin-eslint'
 import typescript from 'rollup-plugin-typescript2'
 import postcss from 'rollup-plugin-postcss'
 import babel from '@rollup/plugin-babel'
+import { DEFAULT_EXTENSIONS } from '@babel/core'
 import { terser } from 'rollup-plugin-terser'
 import serve from 'rollup-plugin-serve'
 import livereload from 'rollup-plugin-livereload'
@@ -36,7 +37,20 @@ export default {
         livereload({ watch: ['dist', 'test'] })
       ]
       : [
-        babel({ babelHelpers: 'runtime', plugins: ['@babel/plugin-transform-runtime'] }),
+        babel({
+          babelHelpers: 'runtime',
+          extensions: [
+            ...DEFAULT_EXTENSIONS,
+            'ts',
+            'tsx'
+          ],
+          plugins: [
+            ['@babel/plugin-transform-runtime', {
+              useESModules: true,
+              corejs: 3
+            }]
+          ]
+        }),
         terser()
       ]
   )
