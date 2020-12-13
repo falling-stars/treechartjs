@@ -1,11 +1,17 @@
-import { SourceDataItem, DataItem, DataMap } from './types/store'
+import { SourceDataItem, StoreItem, SourceData, DataMap } from './types/store'
 
 export default class Store {
   dataMap: DataMap = {}
-  constructor(sourceData: SourceDataItem[]) {
-    this.formatData(sourceData)
+  root: StoreItem | null = null
+
+  constructor(sourceData: SourceData) {
+    this.setup(sourceData)
   }
-  formatData(sourceData: SourceDataItem[]): DataItem | null {
+  setup(sourceData: SourceData) {
+    this.dataMap = {}
+    this.root = this.formatData(sourceData)
+  }
+  formatData(sourceData: SourceData): StoreItem | null {
     const { dataMap } = this
     let root: SourceDataItem | null = null
     sourceData.forEach(item => {
@@ -26,5 +32,19 @@ export default class Store {
       }
     })
     return root
+  }
+  remove(id: string) {
+    const targetItem = this.dataMap[id]
+    if (!targetItem) return
+    const { parent } = targetItem
+    if (parent === undefined) {
+      this.dataMap = {}
+      this.root = null
+    } else {
+      delete this.dataMap[id]
+      const { children } = this.dataMap[parent]
+      const index = children.findIndex(item => item.id === id)
+      index > -1 && children.splice(index, 1)
+    }
   }
 }

@@ -1,9 +1,6 @@
 import './index.scss'
 import FollowScroll from './follow-scroll'
-import Store from './store.ts'
 import { isElement, isNumber, getArrayIntersection, applyStyle } from './utils'
-
-console.log(Store)
 
 export default class TreeChart {
   /*  ======== API ======== */

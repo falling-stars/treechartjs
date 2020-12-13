@@ -3,9 +3,10 @@ export interface SourceDataItem {
   parent?: string | number;
   [key: string]: any;
 }
-export interface DataItem extends SourceDataItem{
+export type SourceData = SourceDataItem[]
+export interface StoreItem extends SourceDataItem {
   children: SourceDataItem[];
 }
 export interface DataMap {
-  [id: string]: DataItem
+  [id: string]: StoreItem
 }
