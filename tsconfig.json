@@ -3,6 +3,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "declaration": true,
+    "declarationDir": "./dist/type",
     "strict": true,
     "esModuleInterop": true,
     "experimentalDecorators": true

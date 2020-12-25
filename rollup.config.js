@@ -24,7 +24,7 @@ export default {
     eslint({
       exclude: ['node_modules/**', 'src/**/*.scss']
     }),
-    typescript(),
+    typescript({ useTsconfigDeclarationDir: true }),
     postcss()
   ].concat(
     isDev
