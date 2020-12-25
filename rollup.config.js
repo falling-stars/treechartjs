@@ -1,4 +1,5 @@
 import resolve from '@rollup/plugin-node-resolve'
+import json from '@rollup/plugin-json'
 import commonjs from '@rollup/plugin-commonjs'
 import eslint from '@rollup/plugin-eslint'
 import typescript from 'rollup-plugin-typescript2'
@@ -20,9 +21,10 @@ export default {
   external: [/@babel\/runtime/],
   plugins: [
     resolve(),
+    json(),
     commonjs(),
     eslint({
-      exclude: ['node_modules/**', 'src/**/*.scss']
+      exclude: ['node_modules/**', '**/*.scss', '**/*.json']
     }),
     typescript({ useTsconfigDeclarationDir: true }),
     postcss()
