@@ -20,7 +20,7 @@ export default {
   },
   external: [/@babel\/runtime/],
   plugins: [
-    resolve(),
+    resolve({ browser: true }),
     json(),
     commonjs(),
     eslint({
