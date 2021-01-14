@@ -11,14 +11,16 @@ import serve from 'rollup-plugin-serve'
 import livereload from 'rollup-plugin-livereload'
 
 const isDev = process.env.NODE_ENV === 'development'
+const format = process.env.OUTPUT_FORMAT || 'umd'
+const isEsm = format === 'esm'
 
 export default {
   input: isDev ? 'dev/index.js' : 'src/index.js',
   output: {
-    dir: 'dist',
-    format: isDev ? 'iife' : 'esm'
+    dir: `dist/${format}`,
+    format
   },
-  external: [/@babel\/runtime/],
+  external: isEsm ? [/@babel\/runtime/] : [],
   plugins: [
     resolve({ browser: true }),
     json(),
@@ -36,11 +38,12 @@ export default {
           port: 8080,
           historyApiFallback: 'dev/index.html'
         }),
-        livereload({ watch: ['dist', 'test'] })
+        livereload({ watch: ['dist', 'dev'] })
       ]
       : [
         babel({
           babelHelpers: 'runtime',
+          exclude: [/node_modules/],
           extensions: [
             ...DEFAULT_EXTENSIONS,
             'ts',

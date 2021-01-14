@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "cross-env NODE_ENV=development rollup -c --watch",
-    "build": "rollup -c"
+    "build": "rollup -c && cross-env OUTPUT_FORMAT=esm rollup -c"
   },
   "repository": {
     "type": "git",
