@@ -11,16 +11,17 @@ import serve from 'rollup-plugin-serve'
 import livereload from 'rollup-plugin-livereload'
 
 const isDev = process.env.NODE_ENV === 'development'
-const format = process.env.OUTPUT_FORMAT || 'umd'
-const isEsm = format === 'esm'
+const format = process.env.OUTPUT_FORMAT || 'esm'
+const isESM = format === 'esm'
 
 export default {
   input: isDev ? 'dev/index.js' : 'src/index.js',
   output: {
     dir: `dist/${format}`,
-    format
+    format,
+    name: isESM ? undefined : 'TreeChart'
   },
-  external: isEsm ? [/@babel\/runtime/] : [],
+  external: isESM ? [/@babel\/runtime/] : [],
   plugins: [
     resolve({ browser: true }),
     json(),
