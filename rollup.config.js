@@ -21,7 +21,7 @@ export default {
     format,
     name: isESM ? undefined : 'TreeChart'
   },
-  external: isESM ? [/@babel\/runtime/] : [],
+  external: !isDev && isESM ? [/@babel\/runtime/] : [],
   plugins: [
     resolve({ browser: true }),
     json(),
