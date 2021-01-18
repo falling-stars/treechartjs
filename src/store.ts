@@ -47,4 +47,17 @@ export default class Store {
       index > -1 && children.splice(index, 1)
     }
   }
+  add(sourceDataItem: SourceDataItem, index?: number) {
+    const { dataMap } = this
+    const { id, parent } = sourceDataItem
+    // 存在相同id的数据
+    if (dataMap[id]) return
+    const newItem = dataMap[id] = { ...sourceDataItem, children: [] }
+    if (parent !== undefined) {
+      const parentItem = dataMap[parent]
+      parentItem && parentItem.children.splice(index || parentItem.length, 0, newItem)
+      return
+    }
+    this.root = newItem
+  }
 }
