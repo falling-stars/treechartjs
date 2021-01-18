@@ -51,10 +51,13 @@ export default {
             'tsx'
           ],
           plugins: [
-            ['@babel/plugin-transform-runtime', {
-              useESModules: true,
-              corejs: 3
-            }]
+            [
+              '@babel/plugin-transform-runtime',
+              {
+                useESModules: true,
+                corejs: 3
+              }
+            ]
           ]
         }),
         terser()
