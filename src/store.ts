@@ -2,7 +2,7 @@ import { SourceDataItem, StoreItem, SourceData, DataMap } from './types/store'
 
 export default class Store {
   dataMap: DataMap = {}
-  root: StoreItem | null = null
+  public root: StoreItem | null = null
 
   constructor(sourceData: SourceData) {
     this.setup(sourceData)
