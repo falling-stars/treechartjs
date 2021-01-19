@@ -55,7 +55,7 @@ export default class Store {
     const newItem = dataMap[id] = { ...sourceDataItem, children: [] }
     if (parent !== undefined) {
       const parentItem = dataMap[parent]
-      parentItem && parentItem.children.splice(index || parentItem.length, 0, newItem)
+      parentItem && parentItem.children.splice(index || parentItem.children.length, 0, newItem)
       return
     }
     this.root = newItem
