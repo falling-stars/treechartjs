@@ -33,7 +33,7 @@ export default class Store {
     })
     return root
   }
-  remove(id: string) {
+  remove(id: string | number) {
     const targetItem = this.dataMap[id]
     if (!targetItem) return
     const { parent } = targetItem
