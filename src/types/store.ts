@@ -3,9 +3,12 @@ export interface SourceDataItem {
   parent?: string | number;
   [key: string]: any;
 }
-export type SourceData = SourceDataItem[]
 export interface StoreItem extends SourceDataItem {
   children: SourceDataItem[];
+}
+export interface RootData extends SourceDataItem {
+  parent: undefined;
+  children: StoreItem[]
 }
 export interface DataMap {
   [id: string]: StoreItem

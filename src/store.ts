@@ -1,17 +1,17 @@
-import { SourceDataItem, StoreItem, SourceData, DataMap } from './types/store'
+import { SourceDataItem, DataMap, RootData } from './types/store'
 
 export default class Store {
   dataMap: DataMap = {}
-  public root: StoreItem | null = null
+  public root: RootData | null = null
 
-  constructor(sourceData: SourceData) {
+  constructor(sourceData: SourceDataItem[]) {
     this.setup(sourceData)
   }
-  setup(sourceData: SourceData) {
+  setup(sourceData: SourceDataItem[]) {
     this.dataMap = {}
     this.root = this.formatData(sourceData)
   }
-  formatData(sourceData: SourceData): StoreItem | null {
+  formatData(sourceData: SourceDataItem[]): RootData | null {
     const { dataMap } = this
     let root: SourceDataItem | null = null
     sourceData.forEach(item => {
