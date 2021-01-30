@@ -1,34 +1,18 @@
 import Store from '../src/store'
-import { RootData } from '../src/types/store'
+import { StoreItem } from '../src/types/store'
 
 const dataList = [
-  { id: 0 },
-  { id: 1, parent: 0 },
-  { id: 11, parent: 1 },
-  { id: 12, parent: 1 },
-  { id: 2, parent: 0 },
+  { id: 211, parent: 21 },
   { id: 21, parent: 2 },
-  { id: 211, parent: 21 }
+  { id: 2, parent: 0 },
+  { id: 12, parent: 1 },
+  { id: 11, parent: 1 },
+  { id: 1, parent: 0 },
+  { id: 0 }
 ]
-const formatData: RootData = {
+const formatData: StoreItem = {
   id: 0,
   children: [
-    {
-      id: 1,
-      parent: 0,
-      children: [
-        {
-          id: 11,
-          parent: 1,
-          children: []
-        },
-        {
-          id: 12,
-          parent: 1,
-          children: []
-        }
-      ]
-    },
     {
       id: 2,
       parent: 0,
@@ -45,6 +29,22 @@ const formatData: RootData = {
           ]
         }
       ]
+    },
+    {
+      id: 1,
+      parent: 0,
+      children: [
+        {
+          id: 12,
+          parent: 1,
+          children: []
+        },
+        {
+          id: 11,
+          parent: 1,
+          children: []
+        }
+      ]
     }
   ]
 }
@@ -57,8 +57,8 @@ test('new store', () => {
 test('remove store item', () => {
   store.remove(2)
   store.remove(12)
-  formatData.children.splice(1, 1)
-  formatData.children[0].children.splice(1, 1)
+  formatData.children.splice(0, 1)
+  formatData.children[0].children.splice(0, 1)
   expect(store.root).toEqual(formatData)
 })
 test('add store item', () => {
@@ -71,4 +71,5 @@ test('add store item', () => {
     parent: 0,
     children: [{ id: 31, parent: 3, children: [] }]
   })
+  expect(store.root).toEqual(formatData)
 })

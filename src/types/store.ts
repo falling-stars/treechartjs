@@ -4,12 +4,8 @@ export interface SourceDataItem {
   [key: string]: any;
 }
 export interface StoreItem extends SourceDataItem {
-  children: SourceDataItem[];
+  children: StoreItem[];
 }
-export interface RootData extends SourceDataItem {
-  parent: undefined;
-  children: StoreItem[]
-}
-export interface DataMap {
+export interface StoreMap {
   [id: string]: StoreItem
 }
