@@ -1,6 +1,6 @@
 import './index.scss'
 import FollowScroll from './follow-scroll'
-import { isElement, isNumber, getArrayIntersection, applyStyle } from './utils'
+import { isElement, isNumber, getArrayIntersection, applyStyle } from './utils.ts'
 
 export default class TreeChart {
   /*  ======== API ======== */
